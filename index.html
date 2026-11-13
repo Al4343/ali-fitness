@@ -102,12 +102,12 @@ async function createInitialPlans(p,weight){
  const n=await db.from('nutrition_plans').insert({user_id:user.id,title:'خطة التغذية الأولية',target_calories:t.kcal,protein_g:t.protein,carbs_g:t.carbs,fat_g:t.fat,water_target_ml:t.water,plan_data:nutrition,is_active:true});
  if(w.error||n.error)document.getElementById('obMsg').textContent='تم حفظ ملفك، لكن تعذر إنشاء إحدى الخطط: '+(w.error||n.error).message;
 }
-function renderSupplementCatalog(p){
+async function renderSupplementCatalog(p){
  const diet=p.dietary_pattern||'no_preference',goal=p.goal||'general_fitness';
  const items=[
- {n:'Whey Concentrate',cat:'بروتين الحليب',why:'خيار اقتصادي لإكمال البروتين إذا كنت تتحمل اللاكتوز ومنتجات الحليب.',when:'فقط إذا لم تكفِ الوجبات',flag:false,match:!['vegan','vegetarian'].includes(diet)},
- {n:'Whey Isolate',cat:'بروتين الحليب المعزول',why:'عادةً أقل لاكتوزاً من concentrate؛ افحص الملصق ولا يناسب حساسية بروتين الحليب.',when:'بديل عند الحاجة لبروتين سهل الاستخدام',flag:false,match:!['vegan','vegetarian'].includes(diet)},
- {n:'Casein Protein',cat:'بروتين بطيء الهضم',why:'طريقة أخرى لإكمال البروتين؛ ليس أفضل تلقائياً من الطعام أو whey.',when:'اختياري حسب توزيع وجباتك',flag:false,match:!['vegan','vegetarian'].includes(diet)},
+ {n:'Whey Concentrate',cat:'بروتين الحليب',why:'خيار اقتصادي لإكمال البروتين إذا كنت تتحمل اللاكتوز ومنتجات الحليب.',when:'فقط إذا لم تكفِ الوجبات',flag:false,match:diet!=='vegan'},
+ {n:'Whey Isolate',cat:'بروتين الحليب المعزول',why:'عادةً أقل لاكتوزاً من concentrate؛ افحص الملصق ولا يناسب حساسية بروتين الحليب.',when:'بديل عند الحاجة لبروتين سهل الاستخدام',flag:false,match:diet!=='vegan'},
+ {n:'Casein Protein',cat:'بروتين بطيء الهضم',why:'طريقة أخرى لإكمال البروتين؛ ليس أفضل تلقائياً من الطعام أو whey.',when:'اختياري حسب توزيع وجباتك',flag:false,match:diet!=='vegan'},
  {n:'Plant Protein Blend',cat:'بروتين نباتي',why:'مزيج البازلاء والأرز أو الصويا خيار لمن يتجنب الحليب؛ راجع مصدر البروتين والحساسية.',when:'عند الحاجة لإكمال البروتين',flag:false,match:['vegan','vegetarian'].includes(diet)},
  {n:'Creatine Monohydrate',cat:'الأداء والقوة',why:'من أكثر المكملات المدروسة لتحسين أداء الجهد العالي المتكرر؛ لا يغني عن التدريب والغذاء.',when:'اختياري للبالغ السليم؛ راجع مختصاً عند مرض كلوي أو حالة صحية/أدوية',flag:true,match:['muscle_gain','recomposition','general_fitness'].includes(goal)},
  {n:'Caffeine',cat:'التركيز والأداء',why:'قد يحسن الأداء مؤقتاً لكنه قد يسبب أرقاً أو خفقاناً وقلقاً؛ احسب القهوة ومصادر الكافيين كلها.',when:'اختياري؛ تجنب قرب النوم ومع الحالات الحساسة أو الحمل',flag:true,match:false},
@@ -120,13 +120,18 @@ function renderSupplementCatalog(p){
  {n:'Magnesium',cat:'معادن',why:'الأفضل تغطية الاحتياج من الطعام؛ المكمل ليس ضرورياً تلقائياً وقد يتداخل مع بعض الأدوية أو يسبب اضطراباً هضمياً.',when:'عند وجود نقص/حاجة يقيّمها مختص',flag:true,match:false},
  {n:'Electrolytes',cat:'سوائل وأملاح',why:'قد تلزم مع التعرق الشديد أو التمرين الطويل والحرارة؛ الماء والطعام يكفيان غالباً للجلسات المعتادة.',when:'حسب مدة التدريب والتعرق والجو',flag:false,match:false},
  {n:'Multivitamin',cat:'فيتامينات متعددة',why:'لا يعوض الغذاء المتنوع ولا يحتاجه الجميع؛ تجنب تكرار الجرعات العالية.',when:'ليس خياراً افتراضياً؛ راجع النظام الغذائي',flag:true,match:false},
- {n:'Zinc',cat:'معادن',why:'يُفضّل الحصول عليه من الطعام؛ الجرعات العالية لفترة طويلة قد تسبب نقص النحاس ومشكلات أخرى.',when:'فقط عند وجود حاجة واضحة',flag:true,match:false}
+ {n:'Zinc',cat:'معادن',why:'يُفضّل الحصول عليه من الطعام؛ الجرعات العالية لفترة طويلة قد تسبب نقص النحاس ومشكلات أخرى.',when:'فقط عند وجود حاجة واضحة',flag:true,match:false},\n {n:'BCAA',cat:'أحماض أمينية',why:'غالباً لا تضيف فائدة واضحة إذا كان إجمالي البروتين اليومي كافياً؛ الطعام أو البروتين الكامل أفضل عادةً.',when:'ليس أولوية عند كفاية البروتين',flag:false,match:false},\n {n:'EAA',cat:'أحماض أمينية أساسية',why:'قد تكون خياراً في ظروف محددة، لكن الوجبة أو البروتين الكامل غالباً أوفر وأكثر عملية.',when:'ليس ضرورياً إذا كان البروتين كافياً',flag:false,match:false},\n {n:'Carbohydrate Powder',cat:'كربوهيدرات رياضية',why:'قد يسهل تزويد الطاقة في الجلسات الطويلة أو الرياضات عالية الحجم؛ لا حاجة له عادةً في تمارين الجيم القصيرة.',when:'حسب حجم التدريب وصعوبة تناول الطعام',flag:false,match:false},\n {n:'Mass Gainer',cat:'مسحوق عالي السعرات',why:'يمكن أن يسهل زيادة السعرات لمن يصعب عليه تناول الطعام، لكنه قد يضيف سعرات كثيرة وسكريات؛ الطعام غالباً أفضل.',when:'فقط عند صعوبة بلوغ فائض السعرات بالطعام',flag:false,match:goal==='weight_gain'},\n {n:'Collagen',cat:'بروتين الكولاجين',why:'ليس بروتيناً كاملاً لبناء العضلات ولا يستبدل whey أو الطعام؛ الأدلة تختلف حسب الغرض.',when:'ليس خياراً أساسياً لبناء العضلات',flag:true,match:false}
  ];
+ const latest=await db.from('body_assessments').select('weight_kg,waist_cm,measured_at').eq('user_id',user.id).order('measured_at',{ascending:false}).limit(1).maybeSingle();
+ const currentWeight=Number(latest.data?.weight_kg)||Number(p.weight_kg)||0;
+ const targets=currentWeight>0?estimate(p,currentWeight):null;
+ const height=Number(p.height_cm)||0;
+ const ratio=height>0&&Number(latest.data?.waist_cm)>0?(Number(latest.data.waist_cm)/height).toFixed(2):null;
  const priority=items.filter(x=>x.match),others=items.filter(x=>!x.match);
  const render=x=>'<article class="card"><span class="tag">'+x.cat+'</span><h3 style="font-size:14px;margin:8px 0 4px">'+x.n+'</h3><p style="font-size:11px;color:var(--muted)">'+x.why+'</p><p style="font-size:11px;color:var(--gold2)">'+x.when+'</p><button class="btn" onclick="saveSupplement('+JSON.stringify(x.n)+','+JSON.stringify(x.cat)+',{typical_use:'+JSON.stringify(x.when)+',clinician_review_required:'+x.flag+'})">أضف إلى قائمتي</button></article>';
  document.getElementById('supplementCatalog').innerHTML='<h3 style="grid-column:1/-1">الأقرب لملفك</h3>'+(priority.length?priority.map(render).join(''):'<p class="note">لا يظهر مكمل أساسي من بياناتك الحالية؛ الأولوية للطعام والنوم والتدريب.</p>')+'<h3 style="grid-column:1/-1">دليل بقية المكملات</h3>'+others.map(render).join('');
  const why=goal==='muscle_gain'?'هدفك زيادة العضلات: الأولوية لفائض سعرات مناسب وبروتين كافٍ، ثم يمكن التفكير بالكرياتين.':goal==='fat_loss'?'هدفك خسارة الدهون: حافظ على البروتين وتمارين المقاومة؛ لا توجد حبوب حرق دهون موصى بها هنا.':goal==='recomposition'?'هدفك إعادة تشكيل الجسم: ثبات البروتين والتدريب التدريجي أهم من كثرة المكملات.':'اختيار المكملات مرتبط بالفجوة الغذائية واحتياجك، وليس باسم الهدف وحده.';
- document.getElementById('supplementAdvice').textContent=why+' لا يوصي النظام بالحديد أو الجرعات العلاجية دون تقييم صحي. هذه إرشادات تثقيفية وليست تشخيصاً أو وصفة طبية.';
+ document.getElementById('supplementAdvice').textContent=why+(targets?' تقدير البروتين اليومي من وزنك الحالي ('+currentWeight+' كغ): نحو '+targets.protein+' غ يومياً. نسبة الخصر إلى الطول المسجلة: '+(ratio||'غير متاحة')+'.':' أدخل وزنك وقياساتك لتقدير هدف البروتين اليومي.')+' لا يمكن استنتاج نقص الفيتامينات أو الحاجة الطبية للمكملات من الوزن أو الخصر وحدهما. الحديد والجرعات العلاجية تتطلب تقييماً مناسباً.';
 }
 async function loadPlans(p){
  renderSupplementCatalog(p);
