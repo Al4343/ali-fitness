@@ -19,7 +19,8 @@ Arabic-first personal training and nutrition web app. Designed for mobile first,
 - `index.html`: Arabic RTL application shell.
 - `assets/app.css`: responsive design system.
 - `assets/app-ui.js`: workout UI, schedule generation, and browser interactions.
-- `assets/app-data.js`: Supabase Auth, data access, nutrition calculations, progress analysis, and AI chat client.\n- `supabase/functions/fitness-coach/index.ts`: authenticated AI coach Edge Function.
+- `assets/app-data.js`: Supabase Auth, data access, nutrition calculations, progress analysis, and AI chat client.
+- `supabase/functions/fitness-coach/index.ts`: authenticated AI coach Edge Function.
 - `supabase/migrations/`: database schema and RLS migrations.
 - `tests/smoke.mjs`: static integration smoke checks.
 - `.github/workflows/validate.yml`: syntax and smoke-test workflow.
@@ -31,9 +32,13 @@ Arabic-first personal training and nutrition web app. Designed for mobile first,
 3. In `assets/app-data.js`, configure the project URL and **publishable** client key for that Supabase project.
 4. Never put a Supabase `service_role` key in browser code or commit it to Git.
 5. Configure Supabase Auth email confirmation and the correct production redirect URLs for the deployed domain.
-6. Keep Row Level Security enabled. Every personal table must retain its user-ownership policy.\n7. In Supabase Dashboard → Edge Functions → Secrets, add `OPENAI_API_KEY`. Optionally set `OPENAI_MODEL`; the current default is `gpt-6-luna`. Never place the API key in browser code or Git.\n8. The deployed `fitness-coach` function returns a setup error until the OpenAI secret is configured.
+6. Keep Row Level Security enabled. Every personal table must retain its user-ownership policy.
+7. In Supabase Dashboard → Edge Functions → Secrets, add `OPENAI_API_KEY`. Optionally set `OPENAI_MODEL`; the current default is `gpt-6-luna`. Never place the API key in browser code or Git.
+8. The deployed `fitness-coach` function returns a setup error until the OpenAI secret is configured.
 
-The client-side publishable key is expected to be visible in a static web app. Data privacy is enforced by Supabase Auth and RLS policies, not by hiding that key.\n\nThe AI coach sends only the consenting user's selected profile fields and last 28 days of workout logs/sessions to the OpenAI API. It does not send email, injury/health notes, allergy notes, or body measurements. Consent is stored per profile and can be withdrawn in the coach screen. The Edge Function enforces a limit of five questions per user per day. OpenAI API usage may incur separate charges.
+The client-side publishable key is expected to be visible in a static web app. Data privacy is enforced by Supabase Auth and RLS policies, not by hiding that key.
+
+The AI coach sends only the consenting user's selected profile fields and last 28 days of workout logs/sessions to the OpenAI API. It does not send email, injury/health notes, allergy notes, or body measurements. Consent is stored per profile and can be withdrawn in the coach screen. The Edge Function enforces a limit of five questions per user per day. OpenAI API usage may incur separate charges.
 
 ## Deploy
 
