@@ -30,8 +30,40 @@ let activeSchedule=null,activeScheduleBase=null,activeAthleteStage=1;const days=
 ['سحب علوي قبضة ضيقة','Close-Grip Lat Pulldown',['الظهر العريض','البايسبس'],'2 × 10–12','يكمل تدريب الظهر.',['امسك المقبض.','اسحب نحو الصدر.','ارجع ببطء.'],'لا تسحب خلف الرقبة.'],
 ['تجديف كيبل','Seated Cable Rows',['منتصف الظهر','الظهر العريض'],'2 × 10–12','يحافظ على توازن الدفع والسحب.',['ابدأ والذراعان ممدودتان.','اسحب نحو الجذع.','ارجع ببطء.'],'لا تدوّر الظهر.']] }
 ];
+window.getWorkoutDays=()=>days;
+window.getActiveSchedule=()=>activeSchedule||days;
+window.applySchedule=(profile)=>{
+ const week=['الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت','الأحد'];
+ const chosen=[...new Set((Array.isArray(profile.available_days)?profile.available_days:[]).filter(x=>Number.isInteger(x)&&x>=0&&x<=6))].sort((a,b)=>a-b);
+ const selected=chosen.length?chosen:[0,2,4,6];
+ const count=selected.length;
+ let map=count===1?[0]:count===2?[0,2]:count===3?[0,2,1]:count===4?[0,1,2,3]:count===5?[0,2,1,3,2]:[0,1,2,3,0,2];
+ const names=['اليوم الأول','اليوم الثاني','اليوم الثالث','اليوم الرابع','اليوم الخامس','اليوم السادس'];
+ activeSchedule=selected.map((weekday,i)=>{
+   const source=days[map[i%map.length]];
+   let items=source.items.map(e=>[...e]);
+   let title=source.title.split('–').slice(1).join('–').trim();
+   let desc=source.desc;
+   if(count===1){items=[...days[0].items.slice(0,2),...days[1].items.slice(0,2),...days[2].items.slice(0,3)];title='تمرين الجسم الكامل';desc='حصة شاملة للجزء العلوي والسفلي، مع عدد تمارين معتدل.'}
+   else if(count===2){if(i===0){items=[...days[0].items.slice(0,3),...days[1].items.slice(0,3)];title='الجزء العلوي';desc='حصة متوازنة للصدر والظهر والكتفين والذراعين.'}else{items=days[2].items.slice();title='الجزء السفلي والجذع';desc='حصة للرجلين والسلسلة الخلفية وعضلات الجذع.'}}
+   else if(count===3){if(i===0){items=[...days[0].items.slice(0,3),...days[1].items.slice(0,2)];title='الجزء العلوي A'}else if(i===1){items=days[2].items.slice();title='الجزء السفلي'}else{items=[...days[1].items.slice(0,3),...days[3].items.slice(0,3)];title='الجزء العلوي B'}}
+   else if(count>=5&&i===4){items=[...days[2].items.slice(0,4),...days[3].items.slice(0,2)];title='أرجل + عضلات مساندة'}
+   else if(count===6&&i===5){items=[...days[2].items.slice(0,4)];title='أرجل + جذع (حجم معتدل)'}
+   const exp=profile.training_experience||'beginner';
+   items=items.map(e=>{const x=[...e];const m=String(e[3]).match(/(\d+)(?:–(\d+))?\s*×\s*(\d+)(?:–(\d+))?/);if(m){let sets=Number(m[1]),reps1=Number(m[3]),reps2=Number(m[4]||m[3]);if(exp==='beginner'||exp==='returning')sets=Math.min(2,sets);else if(exp==='advanced')sets=Math.min(4,sets+1);x[3]=sets+' × '+reps1+'–'+reps2}return x});
+   return {...source,items,title:week[weekday]+' — '+title,desc};
+ });
+ activeScheduleBase=activeSchedule.map(d=>({...d,items:d.items.map(e=>[...e])}));
+ activeAthleteStage=profile.training_experience==='advanced'?3:profile.training_experience==='intermediate'?2:1;
+ didx=0;
+ const tabs=document.getElementById('daytabs')||document.querySelector('.daytabs');
+ if(tabs)tabs.innerHTML=activeSchedule.map((d,i)=>'<button class="daytab '+(i===0?'active':'')+'" onclick="day('+i+')"><b>'+names[i]+'</b>'+week[selected[i]]+'<small style="display:block">'+safeText(d.title.split('—').slice(1).join('—').trim())+'</small></button>').join('');
+ const tag=document.getElementById('trainingDaysTag');if(tag)tag.textContent=selected.length+' أيام • '+(profile.training_experience||'beginner');
+ renderDay();
+};
+window.applyAthleteStage=(level)=>{if(!activeScheduleBase?.length)return;activeAthleteStage=level;activeSchedule=activeScheduleBase.map(d=>({...d,items:d.items.map(e=>{const copy=[...e],compound=(e[2]||[]).length>=2;if(level===1)copy[3]='2 × 10–15';else if(level===2)copy[3]=compound?'3 × 8–12':'2–3 × 10–15';else copy[3]=compound?'4 × 6–10':'3 × 10–15';return copy})}));const tag=document.getElementById('trainingDaysTag');if(tag)tag.textContent=activeSchedule.length+' أيام • LEVEL 0'+level;renderDay()};
 function tab(id){document.querySelectorAll('.section').forEach(x=>x.classList.toggle('active',x.id===id));document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x.dataset.tab===id));window.scrollTo({top:0,behavior:'smooth'})}
-async function day(i){didx=i;window.cloudDoneCache=[];document.querySelectorAll('.daytab').forEach((x,j)=>x.classList.toggle('active',i===j));renderDay();if(window.currentFitUserId){await loadWorkoutSession();await preloadExerciseHistory()}}
+async async function day(i){didx=i;window.cloudDoneCache=[];document.querySelectorAll('.daytab').forEach((x,j)=>x.classList.toggle('active',i===j));renderDay();if(window.currentFitUserId){await loadWorkoutSession();await preloadExerciseHistory()}}
 let workoutStartedAt=null;
 async function startWorkout(){workoutStartedAt=Date.now();document.getElementById('sessionTimer').textContent='بدأت الحصة — ركّز على التقنية والتنفس';if(window.currentFitUserId){const done=readDone();const d=(activeSchedule||days)[didx];const ok=await window.saveWorkoutSession(done,didx,d?.title||('اليوم '+(didx+1)),d?.items?.length||0);if(!ok)document.getElementById('sessionTimer').textContent='تعذر حفظ بداية الحصة'}document.getElementById('workouts').scrollIntoView({behavior:'smooth',block:'start'})}
 function localSessionDate(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
