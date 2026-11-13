@@ -127,16 +127,23 @@ async function renderSupplementCatalog(p){
  {n:'Mass Gainer',cat:'مسحوق عالي السعرات',why:'يمكن أن يسهل زيادة السعرات لمن يصعب عليه تناول الطعام، لكنه قد يضيف سعرات كثيرة وسكريات؛ الطعام غالباً أفضل.',when:'فقط عند صعوبة بلوغ فائض السعرات بالطعام',flag:false,match:goal==='weight_gain'},
  {n:'Collagen',cat:'بروتين الكولاجين',why:'ليس بروتيناً كاملاً لبناء العضلات ولا يستبدل whey أو الطعام؛ الأدلة تختلف حسب الغرض.',when:'ليس خياراً أساسياً لبناء العضلات',flag:true,match:false}
  ];
- const latest=await db.from('body_assessments').select('weight_kg,waist_cm,measured_at').eq('user_id',user.id).order('measured_at',{ascending:false}).limit(1).maybeSingle();
- const currentWeight=Number(latest.data?.weight_kg)||Number(p.weight_kg)||0;
+ const since=new Date(Date.now()-30*86400000).toISOString().slice(0,10);
+ const [measurements,training]=await Promise.all([
+  db.from('body_assessments').select('weight_kg,waist_cm,measured_at').eq('user_id',user.id).order('measured_at',{ascending:false}).limit(2),
+  db.from('workout_logs').select('exercise_name,performed_at').eq('user_id',user.id).gte('performed_at',since)
+ ]);
+ const latest=measurements.data?.[0]||null,previous=measurements.data?.[1]||null;
+ const currentWeight=Number(latest?.weight_kg)||Number(p.weight_kg)||0;
  const targets=currentWeight>0?estimate(p,currentWeight):null;
  const height=Number(p.height_cm)||0;
- const ratio=height>0&&Number(latest.data?.waist_cm)>0?(Number(latest.data.waist_cm)/height).toFixed(2):null;
+ const ratio=height>0&&Number(latest?.waist_cm)>0?(Number(latest.waist_cm)/height).toFixed(2):null;
+ const weightChange=latest?.weight_kg!=null&&previous?.weight_kg!=null?(Number(latest.weight_kg)-Number(previous.weight_kg)).toFixed(1):null;
+ const trainingCount=training.data?.length??0;
  const priority=items.filter(x=>x.match),others=items.filter(x=>!x.match);
  const render=x=>'<article class="card"><span class="tag">'+safeText(x.cat)+'</span><h3 style="font-size:14px;margin:8px 0 4px">'+safeText(x.n)+'</h3><p style="font-size:11px;color:var(--muted)">'+safeText(x.why)+'</p><p style="font-size:11px;color:var(--gold2)">'+safeText(x.when)+'</p><button class="btn" onclick=\'saveSupplement('+JSON.stringify(x.n)+','+JSON.stringify(x.cat)+',{typical_use:'+JSON.stringify(x.when)+',clinician_review_required:'+x.flag+'})\'>أضف إلى قائمتي</button></article>';
  document.getElementById('supplementCatalog').innerHTML='<h3 style="grid-column:1/-1">الأقرب لملفك</h3>'+(priority.length?priority.map(render).join(''):'<p class="note">لا يظهر مكمل أساسي من بياناتك الحالية؛ الأولوية للطعام والنوم والتدريب.</p>')+'<h3 style="grid-column:1/-1">دليل بقية المكملات</h3>'+others.map(render).join('');
  const why=goal==='muscle_gain'?'هدفك زيادة العضلات: الأولوية لفائض سعرات مناسب وبروتين كافٍ، ثم يمكن التفكير بالكرياتين.':goal==='fat_loss'?'هدفك خسارة الدهون: حافظ على البروتين وتمارين المقاومة؛ لا توجد حبوب حرق دهون موصى بها هنا.':goal==='recomposition'?'هدفك إعادة تشكيل الجسم: ثبات البروتين والتدريب التدريجي أهم من كثرة المكملات.':'اختيار المكملات مرتبط بالفجوة الغذائية واحتياجك، وليس باسم الهدف وحده.';
- document.getElementById('supplementAdvice').textContent=why+(targets?' تقدير البروتين اليومي من وزنك الحالي ('+currentWeight+' كغ): نحو '+targets.protein+' غ يومياً. نسبة الخصر إلى الطول المسجلة: '+(ratio||'غير متاحة')+'.':' أدخل وزنك وقياساتك لتقدير هدف البروتين اليومي.')+' لا يمكن استنتاج نقص الفيتامينات أو الحاجة الطبية للمكملات من الوزن أو الخصر وحدهما. الحديد والجرعات العلاجية تتطلب تقييماً مناسباً.';
+ document.getElementById('supplementAdvice').textContent=why+(targets?' وزنك المسجل: '+currentWeight+' كغ؛ هدف البروتين التقديري: نحو '+targets.protein+' غ يومياً.':' أدخل وزنك لتقدير هدف البروتين اليومي.')+' نسبة الخصر إلى الطول: '+(ratio||'غير متاحة')+'. '+(weightChange!==null?'تغير الوزن بين آخر قياسين: '+(Number(weightChange)>0?'+':'')+weightChange+' كغ. ':'')+' سجلات التمرين خلال آخر 30 يوماً: '+trainingCount+'. هذه مؤشرات متابعة وليست تقييماً لتركيب الجسم أو التشخيص الصحي. لا يمكن استنتاج نقص الفيتامينات من الوزن أو الخصر وحدهما؛ الحديد والجرعات العلاجية تتطلب تقييماً مناسباً.';
 }
 async function loadPlans(p){
  renderSupplementCatalog(p);
