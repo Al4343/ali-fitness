@@ -33,12 +33,13 @@ function estimate(profile,weight){
 }
 async function createInitialPlans(p,weight){
  const t=estimate(p,weight);
+ const targets=p.age<18?{kcal:null,protein:null,fat:null,carbs:null,water:t.water}:t;
  const selected=window.getScheduledWeekdays?.()||p.available_days||[0,2,4,6];
  const activeDays=window.getActiveSchedule?.()||[];
  const workout={weekly_days:selected,schedule:activeDays.map((d,i)=>({weekday:selected[i],title:d.title,description:d.desc,exercises:d.items.map(e=>({name:e[0],english_name:e[1],muscles:e[2],sets_reps:e[3],purpose:e[4],steps:e[5],caution:e[6]}))})),progression:{experience:p.training_experience,weeks_1_2:'تعلّم التقنية واترك 2–3 تكرارات احتياطية',weeks_3_4:'ارفع التكرارات أولاً، ثم زد الحمل تدريجياً إذا اكتملت كل المجموعات بلا ألم',rule:'لا ترفع الوزن تلقائياً؛ زد الحمل تدريجياً بعد إكمال أعلى مدى التكرار بتقنية سليمة في كل المجموعات.'}};
  const w=await db.from('workout_plans').insert({user_id:user.id,title:'خطة البداية – '+selected.length+' أيام',goal:p.goal,level:p.training_experience,phase:'Foundation',plan_data:workout,is_active:true});
- const nutrition={calories:t.kcal,protein_g:t.protein,fat_g:t.fat,carbs_g:t.carbs,water_ml:t.water,dietary_pattern:p.dietary_pattern,preferred_training_times:p.preferred_training_times,allergies:p.health_constraints?.allergies||'',disclaimer:p.age<18?'تقديرات غير مخصصة لخسارة الوزن للمراهقين؛ استشر مختص تغذية أطفال.':'تقديرات أولية تحتاج متابعة وتعديل.'};
- const n=await db.from('nutrition_plans').insert({user_id:user.id,title:'خطة التغذية الأولية',target_calories:t.kcal,protein_g:t.protein,carbs_g:t.carbs,fat_g:t.fat,water_target_ml:t.water,plan_data:nutrition,is_active:true});
+ const nutrition={calories:targets.kcal,protein_g:targets.protein,fat_g:targets.fat,carbs_g:targets.carbs,water_ml:targets.water,dietary_pattern:p.dietary_pattern,activity_level:p.activity_level,preferred_training_times:p.preferred_training_times,allergies:p.health_constraints?.allergies||'',disclaimer:p.age<18?'تقديرات غير مخصصة لخسارة الوزن للمراهقين؛ استشر مختص تغذية أطفال.':'تقديرات أولية تحتاج متابعة وتعديل.'};
+ const n=await db.from('nutrition_plans').insert({user_id:user.id,title:'خطة التغذية الأولية',target_calories:targets.kcal,protein_g:targets.protein,carbs_g:targets.carbs,fat_g:targets.fat,water_target_ml:targets.water,plan_data:nutrition,is_active:true});
  if(w.error||n.error)document.getElementById('obMsg').textContent='تم حفظ ملفك، لكن تعذر إنشاء إحدى الخطط: '+(w.error||n.error).message;
 }async function renderSupplementCatalog(p){
  const diet=p.dietary_pattern||'no_preference',goal=p.goal||'general_fitness';
@@ -104,7 +105,7 @@ async function loadPlans(p){
  renderSupplementCatalog(p);
  const wp=await db.from('workout_plans').select('id,plan_data,phase,level').eq('user_id',user.id).eq('is_active',true).order('created_at',{ascending:false}).limit(1);window.activeWorkoutPlanId=wp.data?.[0]?.id||null;
  const q=await db.from('nutrition_plans').select('*').eq('user_id',user.id).eq('is_active',true).order('created_at',{ascending:false}).limit(1);
- if(q.data&&q.data.length){const n=q.data[0];document.getElementById('calTarget').textContent=n.target_calories||'—';document.getElementById('proteinTarget').textContent=n.protein_g||'—';document.getElementById('fatTarget').textContent=n.fat_g||'—';document.getElementById('carbTarget').textContent=n.carbs_g||'—';document.getElementById('waterTarget').textContent=n.water_target_ml||'—';document.getElementById('nutritionTargets').textContent='حساب مبدئي وفق العمر والطول والوزن والهدف ونشاط التدريب.';document.getElementById('heroCalories').textContent=n.target_calories||'—';document.getElementById('heroProtein').textContent=(n.protein_g||'—')+' g';}
+ if(q.data&&q.data.length){const n=q.data[0];document.getElementById('calTarget').textContent=n.target_calories||'—';document.getElementById('proteinTarget').textContent=n.protein_g||'—';document.getElementById('fatTarget').textContent=n.fat_g||'—';document.getElementById('carbTarget').textContent=n.carbs_g||'—';document.getElementById('waterTarget').textContent=n.water_target_ml||'—';document.getElementById('nutritionTargets').textContent=p.age<18?'لا نعرض أهداف سعرات أو ماكروز للمستخدمين دون 18 عاماً. استشر مختص تغذية أطفال أو مراهقين.':'حساب تقديري وفق العمر والطول والوزن والهدف ومستوى النشاط اليومي.';document.getElementById('heroCalories').textContent=n.target_calories||'—';document.getElementById('heroProtein').textContent=(n.protein_g||'—')+' g';}
  const diet=p.dietary_pattern;
  const targetKcal=Number(document.getElementById('calTarget').textContent)||2200;
  const scale=Math.max(.75,Math.min(1.3,targetKcal/2200));
