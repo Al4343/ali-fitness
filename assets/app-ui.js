@@ -1,6 +1,6 @@
 
 const base='https://cdn.jsdelivr.net/gh/yuhonas/free-exercise-db@main/exercises/';let data=[],didx=0,flt='all';
-let activeSchedule=null,activeScheduleBase=null,activeAthleteStage=1;const days=[
+let activeSchedule=null,activeScheduleBase=null,activeAthleteStage=1,activeWeekdays=[];const days=[
 {title:'الاثنين – أكتاف وصدر وترايسبس',desc:'تركيز على ضغط الكتف والكتف الجانبي مع حجم معتدل للصدر.',items:[
 ['ضغط كتف دمبل جالس','Seated Dumbbell Press',['الكتف الأمامي','الكتف الجانبي','الترايسبس'],'2–3 × 8–12','يبني قوة وحجم الكتف.',['اجلس مع إسناد الظهر.','ابدأ الدمبل قرب مستوى الأذن.','ادفع للأعلى ثم انزل ببطء.'],'لا تقوّس أسفل الظهر.'],
 ['رفع جانبي بالكابل','Cable Seated Lateral Raise',['الكتف الجانبي'],'3 × 12–15','يعزل الكتف الجانبي لزيادة عرض الكتفين.',['قف بجانب جهاز الكابل.','ارفع الذراع جانباً لمستوى الكتف.','اخفض ببطء.'],'لا تستخدم ثقلاً ثقيلاً.'],
@@ -32,10 +32,12 @@ let activeSchedule=null,activeScheduleBase=null,activeAthleteStage=1;const days=
 ];
 window.getWorkoutDays=()=>days;
 window.getActiveSchedule=()=>activeSchedule||days;
+window.getScheduledWeekdays=()=>activeWeekdays.slice();
 window.applySchedule=(profile)=>{
  const week=['الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت','الأحد'];
  const chosen=[...new Set((Array.isArray(profile.available_days)?profile.available_days:[]).filter(x=>Number.isInteger(x)&&x>=0&&x<=6))].sort((a,b)=>a-b);
  const selected=chosen.length?chosen:[0,2,4,6];
+ activeWeekdays=selected.slice();
  const count=selected.length;
  let map=count===1?[0]:count===2?[0,2]:count===3?[0,2,1]:count===4?[0,1,2,3]:count===5?[0,2,1,3,2]:[0,1,2,3,0,2];
  const names=['اليوم الأول','اليوم الثاني','اليوم الثالث','اليوم الرابع','اليوم الخامس','اليوم السادس'];
