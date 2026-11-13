@@ -38,7 +38,7 @@ Arabic-first personal training and nutrition web app. Designed for mobile first,
 
 The client-side publishable key is expected to be visible in a static web app. Data privacy is enforced by Supabase Auth and RLS policies, not by hiding that key.
 
-The AI coach sends only the consenting user's selected profile fields and last 28 days of workout logs/sessions to the OpenAI API. It does not send email, injury/health notes, allergy notes, or body measurements. Consent is stored per profile and can be withdrawn in the coach screen. The Edge Function enforces a limit of five questions per user per day. OpenAI API usage may incur separate charges.
+The AI coach sends the consenting user's question, selected profile fields, and last 28 days of workout logs/sessions to the OpenAI API. It does not send email, injury/health notes, allergy notes, or body measurements. Users are warned not to include sensitive medical details in their question. Consent is stored per profile and can be withdrawn in the coach screen. The Edge Function enforces a rolling limit of five questions per user per 24 hours. OpenAI API usage may incur separate charges.
 
 ## Deploy
 
