@@ -1,16 +1,20 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [html, ui, data] = await Promise.all([
+const [html, ui, data, coach] = await Promise.all([
   readFile(new URL('../index.html', import.meta.url), 'utf8'),
   readFile(new URL('../assets/app-ui.js', import.meta.url), 'utf8'),
   readFile(new URL('../assets/app-data.js', import.meta.url), 'utf8'),
+  readFile(new URL('../supabase/functions/fitness-coach/index.ts', import.meta.url), 'utf8'),
 ]);
 
 assert.match(html, /\.\/assets\/app\.css/);
 assert.match(html, /\.\/assets\/app-ui\.js/);
 assert.match(html, /\.\/assets\/app-data\.js/);
 assert.match(html, /id="daytabs"/);
+assert.match(html, /id="coach"/);
+assert.match(html, /id="aiConsent"/);
+assert.match(html, /id="aiCoachChat"/);
 assert.match(ui, /async function day\(i\)/);
 assert.match(ui, /window\.applySchedule=/);
 assert.match(ui, /window\.getActiveSchedule=/);
@@ -26,6 +30,12 @@ assert.match(data, /const plansCreated=await createInitialPlans/);
 assert.match(data, /return true;/);
 assert.match(data, /window\.saveWorkoutSession/);
 assert.match(data, /window\.fetchWorkoutSession/);
+assert.match(data, /db\.functions\.invoke\('fitness-coach'/);
+assert.match(data, /window\.saveAiConsent=/);
+assert.match(coach, /https:\/\/api\.openai\.com\/v1\/responses/);
+assert.match(coach, /ai_coach_consent/);
+assert.match(coach, />= 5/);
+assert.doesNotMatch(coach, /health_constraints|body_assessments/);
 assert.doesNotMatch(data, /\b(activeSchedule|activeScheduleBase|didx|renderDay)\b/);
 
 const declaredIds = new Set([...html.matchAll(/\bid=["']([^"']+)["']/g)].map((m) => m[1]));
