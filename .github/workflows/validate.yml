@@ -1,0 +1,20 @@
+name: Validate ALI FITNESS PRO
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, redesign/ali-fitness-pro]
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check classic UI script syntax
+        run: node --check assets/app-ui.js
+      - name: Check ES module syntax
+        run: node --input-type=module --check < assets/app-data.js
+      - name: Run application smoke tests
+        run: node tests/smoke.mjs
