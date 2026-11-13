@@ -19,7 +19,7 @@ assert.match(data, /window\.applySchedule\(p\)/);
 assert.match(data, /window\.getScheduledWeekdays\?\./);
 assert.match(data, /window\.restoreWorkoutPlan\(wp\.data\[0\]\.plan_data\)/);
 assert.match(data, /activity_level/);
-assert.match(data, /window\\.updateFitnessProfile=/);
+assert.match(data, /window\.updateFitnessProfile=/);
 assert.match(data, /function loadProfileSettings/);
 assert.match(data, /window\.saveWorkoutSession/);
 assert.match(data, /window\.fetchWorkoutSession/);
