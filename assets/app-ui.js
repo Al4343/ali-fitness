@@ -63,6 +63,17 @@ window.applySchedule=(profile)=>{
  window.currentFitnessProfile=profile;const timeLabels={morning:'صباحاً',afternoon:'بعد الظهر',evening:'مساءً',flexible:'وقت مرن'};const time=(profile.preferred_training_times||[])[0];const tag=document.getElementById('trainingDaysTag');if(tag)tag.textContent=selected.length+' أيام • '+(timeLabels[time]||'وقت مرن');
  renderDay();
 };
+window.restoreWorkoutPlan=(plan)=>{
+ if(!plan||!Array.isArray(plan.schedule)||!plan.schedule.length)return false;
+ activeWeekdays=Array.isArray(plan.weekly_days)?plan.weekly_days.slice():plan.schedule.map((x,i)=>Number.isInteger(x.weekday)?x.weekday:i);
+ const week=['الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت','الأحد'];
+ activeSchedule=plan.schedule.map((d,i)=>({title:d.title||('اليوم '+(i+1)),desc:d.description||'',items:(d.exercises||[]).map(e=>[e.name||'تمرين',e.english_name||'',Array.isArray(e.muscles)?e.muscles:[],e.sets_reps||'2 × 10–12',e.purpose||'',Array.isArray(e.steps)?e.steps:[],e.caution||'حافظ على التقنية الصحيحة.'])}));
+ activeScheduleBase=activeSchedule.map(d=>({...d,items:d.items.map(e=>[...e])}));
+ didx=0;
+ const tabs=document.getElementById('daytabs');if(tabs)tabs.innerHTML=activeSchedule.map((d,i)=>'<button class="daytab '+(i===0?'active':'')+'" onclick="day('+i+')"><b>اليوم '+(i+1)+'</b>'+week[activeWeekdays[i]]+'<small style="display:block">'+safeText(d.title.split('—').slice(1).join('—').trim()||d.title)+'</small></button>').join('');
+ const tag=document.getElementById('trainingDaysTag');if(tag)tag.textContent=activeSchedule.length+' أيام • خطة محفوظة';
+ renderDay();return true;
+};
 window.applyAthleteStage=(level)=>{if(!activeScheduleBase?.length)return;activeAthleteStage=level;activeSchedule=activeScheduleBase.map(d=>({...d,items:d.items.map(e=>{const copy=[...e],compound=(e[2]||[]).length>=2;if(level===1)copy[3]='2 × 10–15';else if(level===2)copy[3]=compound?'3 × 8–12':'2–3 × 10–15';else copy[3]=compound?'4 × 6–10':'3 × 10–15';return copy})}));const tag=document.getElementById('trainingDaysTag');if(tag)tag.textContent=activeSchedule.length+' أيام • LEVEL 0'+level;renderDay()};
 function tab(id){document.querySelectorAll('.section').forEach(x=>x.classList.toggle('active',x.id===id));document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x.dataset.tab===id));window.scrollTo({top:0,behavior:'smooth'})}
 async function day(i){didx=i;window.cloudDoneCache=[];document.querySelectorAll('.daytab').forEach((x,j)=>x.classList.toggle('active',i===j));renderDay();if(window.currentFitUserId){await loadWorkoutSession();await preloadExerciseHistory()}}
