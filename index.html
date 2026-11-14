@@ -63,6 +63,65 @@ body[data-theme="light"] .nutrition-hero p,body[data-theme="light"] .meal-copy p
  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(min-width:761px){.nav.side-nav{transform:none!important}.sidebar-backdrop{display:none!important}}
+</style>
+<style id="ALI_FITNESS_MOBILE_FIX">
+/* Clean mobile layout: one navigation system, compact coach header, readable exercise cards */
+@media(max-width:760px){
+  .top{position:sticky;top:0;z-index:25}
+  .topin{display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:9px;padding:9px 12px;min-height:68px}
+  .menu-toggle{display:grid;place-items:center;width:40px;height:40px;grid-column:1;grid-row:1}
+  .brand{grid-column:2;grid-row:1;justify-content:center;gap:8px;min-width:0;font-size:clamp(13px,4vw,17px);letter-spacing:.5px}
+  .brand small{font-size:8px;letter-spacing:1.3px}
+  .brand .logo{width:36px;height:36px;flex:0 0 36px}
+  .top-actions{grid-column:3;grid-row:1;gap:0}
+  .top-actions #appUser{display:none}
+  .top-actions .theme-toggle{width:40px;height:40px}
+  .header-progress{display:none!important}
+  /* Sidebar is the only navigation on phones; the old fixed tab bar caused overlap. */
+  .bottom{display:none!important}
+  main.wrap{margin:0!important;padding:0 12px calc(36px + env(safe-area-inset-bottom))!important}
+  .hero{padding:17px 2px 12px}
+  .hero h1{font-size:clamp(27px,7vw,36px);margin:6px 0}
+  .hero>p{font-size:12px;line-height:1.7}
+  .hero .banner{min-height:0;padding:13px;gap:8px}
+  .stats{gap:7px;margin:9px 0}
+  .stat{padding:10px}
+  .section>.head{margin:18px 2px 10px}
+  .section>.head h2{font-size:19px}
+  .daytabs{gap:5px}
+  .daytab{padding:8px 3px;font-size:10px}
+  .list{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+  .ex{grid-template-columns:minmax(0,1fr) 88px;gap:10px;padding:10px;border-radius:16px;align-items:start}
+  .ex img{grid-column:2;grid-row:1;width:88px;height:104px;object-fit:cover;border-radius:11px}
+  .ex>div{grid-column:1;grid-row:1;min-width:0}
+  .ex h3{font-size:14px;line-height:1.45}
+  .ex .en{font-size:10px;overflow-wrap:anywhere}
+  .ex .muscles{gap:4px}
+  .ex .muscles span{font-size:9px}
+  .ex .meta{font-size:10px;line-height:1.6}
+  .ex>div>small{display:block;font-size:10px;line-height:1.5;margin-top:6px}
+  .ex .track{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:10px}
+  .ex .track input,.ex .track select{width:100%!important;min-width:0;height:40px;padding:7px 8px!important;font-size:12px!important}
+  .ex .track label{grid-column:1/-1;justify-content:flex-start}
+  .ex .track .btn{grid-column:1/-1;min-height:42px;font-size:13px}
+  .ex .track small{grid-column:1/-1}
+  .note{margin:10px 0}
+}
+@media(max-width:390px){
+  .topin{grid-template-columns:38px minmax(0,1fr) 38px;gap:6px;padding-inline:9px}
+  .menu-toggle,.top-actions .theme-toggle{width:36px;height:36px}
+  .brand{font-size:13px;gap:6px}
+  .brand .logo{width:32px;height:32px;flex-basis:32px;font-size:17px}
+  .brand small{font-size:7px}
+  main.wrap{padding-inline:10px!important}
+  .ex{grid-template-columns:minmax(0,1fr) 78px;padding:9px;gap:8px}
+  .ex img{width:78px;height:94px}
+}
+@media(min-width:761px){
+  .topin{min-height:66px}
+  .bottom{display:none!important}
+  main.wrap{padding-bottom:35px}
+}
 </style></head><body class="locked"><div id="authGate"><div class="authbox"><h2>ALI FITNESS PRO</h2><p>سجّل الدخول لحفظ خطتك وقياساتك بحساب خاص والوصول إليها من أي جهاز.</p><div id="authPanel"><div class="field" id="nameField" style="display:none"><label>الاسم</label><input id="authName" placeholder="اسمك"></div><div class="field"><label>البريد الإلكتروني</label><input id="authEmail" type="email" autocomplete="email"></div><div class="field"><label>كلمة المرور</label><input id="authPassword" type="password" autocomplete="current-password"></div><button class="btn" id="authSubmit" onclick="authSubmit()">تسجيل الدخول</button><button class="authswitch" id="authToggle" onclick="toggleAuth()">إنشاء حساب جديد</button><button class="authswitch" onclick="resetPassword()">نسيت كلمة المرور؟</button><div class="authmsg" id="authMsg"></div></div><div id="onboardPanel" style="display:none"><h2>ملفك الرياضي</h2><p>أدخل بياناتك الأساسية. لا توجد قياسات افتراضية.</p><div class="authgrid"><div class="field"><label>العمر</label><input id="obAge" type="number" min="13" max="100"></div><div class="field"><label>الجنس</label><select id="obSex"><option value="prefer_not_to_say">أفضل عدم الإجابة</option><option value="male">ذكر</option><option value="female">أنثى</option><option value="other">آخر</option></select></div><div class="field"><label>الطول سم</label><input id="obHeight" type="number" min="80" max="250"></div><div class="field"><label>الوزن كغ</label><input id="obWeight" type="number" min="20" max="400" step=".1"></div><div class="field"><label>الخصر سم (اختياري)</label><input id="obWaist" type="number" step=".1"></div><div class="field"><label>النظام الغذائي</label><select id="obDiet"><option value="no_preference">بدون تفضيل</option><option value="omnivore">متنوع</option><option value="vegetarian">نباتي</option><option value="vegan">نباتي صرف</option><option value="pescatarian">سمك ونباتي</option></select></div><div class="field"><label>الهدف</label><select id="obGoal"><option value="muscle_gain">زيادة العضلات</option><option value="fat_loss">خسارة الدهون</option><option value="recomposition">إعادة تشكيل الجسم</option><option value="weight_gain">زيادة الوزن</option><option value="general_fitness">لياقة عامة</option></select></div><div class="field"><label>الخبرة</label><select id="obLevel"><option value="beginner">مبتدئ</option><option value="returning">عائد بعد انقطاع</option><option value="intermediate">متوسط</option><option value="advanced">متقدم</option></select></div></div><div class="field"><label>أيام التدريب المتاحة (اكتب أرقام الأيام 0-6 مفصولة بفواصل، 0 الاثنين)</label><input id="obDays" placeholder="0,1,3,5"></div><div class="field"><label>ملاحظات أو قيود غذائية/صحية (اختياري)</label><input id="obNotes"></div><button class="btn" onclick="saveOnboarding()">حفظ وبدء</button><button class="authswitch" onclick="signOut()">تسجيل الخروج</button><div id="obMsg" class="authmsg"></div></div></div></div><header class="top"><div class="topin"><button class="top-icon menu-toggle" type="button" aria-label="فتح القائمة" onclick="toggleSideNav()">☰</button><div class="brand"><div class="logo">A</div><div>ALI FITNESS<small>YOUR PERSONAL COACH</small></div></div><div class="top-actions"><div id="appUser"></div><button class="top-icon theme-toggle" type="button" aria-label="تبديل المظهر" onclick="toggleTheme()">☀</button><button class="btn header-progress" onclick="tab('progress')">سجل تقدمي</button></div></div></header><main class="wrap">
 <section class="hero"><div class="eyebrow">YOUR PERSONAL FITNESS PLAN</div><h1>ابنِ جسمك.<br><span>قوّتك تبدأ اليوم.</span></h1><p>مدربك الرياضي بالعربي: خطة تدريب قابلة للتدرّج، شرح للتمارين والعضلات المستهدفة، تغذية ومتابعة للأوزان والقياسات.</p><div class="banner"><div><span class="tag">ALI FITNESS PRO</span><br><b>خطة تدريب وتغذية تتكيّف مع بياناتك</b><div style="font-size:10px;color:var(--muted)">Personal Training • Nutrition • Progress</div></div><strong style="font-size:23px">PRO<small style="display:block;font-size:10px;text-align:center">PERSONAL</small></strong></div><div class="stats"><div class="stat"><b id="heroWeight">—</b><span>الوزن الحالي</span></div><div class="stat"><b id="heroWaist">—</b><span>الخصر</span></div><div class="stat"><b>—</b><span>السعرات بعد التقييم</span></div><div class="stat"><b>—</b><span>بروتين يومي</span></div></div></section>
 <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSideNav(false)"></div><nav class="nav side-nav" id="sideNav" aria-label="القائمة الرئيسية"><div class="side-label">القائمة الرئيسية</div><button class="active" data-tab="program" onclick="tab('program');toggleSideNav(false)"><span>▦</span> لوحة المدرب</button><button data-tab="library" onclick="tab('library');toggleSideNav(false)"><span>✦</span> مكتبة التمارين</button><button data-tab="nutrition" onclick="tab('nutrition');toggleSideNav(false)"><span>◉</span> التغذية والمكملات</button><button data-tab="progress" onclick="tab('progress');toggleSideNav(false)"><span>↗</span> تطور جسمك</button><button data-tab="guide" onclick="tab('guide');toggleSideNav(false)"><span>▤</span> دليل التدريب</button><div class="sidebar-coach"><b>مدربك معك بكل خطوة</b><small>خطتك، وجباتك وتقدمك في مكان واحد</small></div></nav>
