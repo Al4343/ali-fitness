@@ -1,0 +1,17 @@
+{
+  "name": "ALI FITNESS PRO",
+  "short_name": "ALI FITNESS",
+  "description": "Your personal fitness coach",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#08090b",
+  "theme_color": "#08090b",
+  "icons": [
+    {
+      "src": "./assets/ali-fitness-logo.webp",
+      "sizes": "192x192",
+      "type": "image/webp",
+      "purpose": "any maskable"
+    }
+  ]
+}
