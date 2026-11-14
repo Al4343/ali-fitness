@@ -70,7 +70,7 @@ window.saveLog=async()=>{let weight=+document.getElementById('weight').value,wai
 window.saveSet=async(d,i)=>{let w=+document.getElementById('kg'+d+'-'+i).value,rp=+document.getElementById('rep'+d+'-'+i).value,rpe=Number(document.getElementById('rpe'+d+'-'+i).value)||null,pain=document.getElementById('pain'+d+'-'+i).checked;if(!Number.isFinite(w)||w<0||!Number.isInteger(rp)||rp<1||rp>100){alert('أدخل وزناً صحيحاً وتكرارات بين 1 و100');return}let record={weight_kg:w,reps:rp,rpe,pain,logged_at:new Date().toISOString()};let r=await db.from('workout_logs').insert({user_id:user.id,exercise_name:window.exerciseName(d,i),sets_data:[record]});if(r.error){alert(r.error.message);return}document.getElementById('ok'+d+'-'+i).textContent='✓ محفوظ';await renderWeeklyReview()};
 
 
-function applySchedule(profile){
+function applySchedule(profile){ window.currentFitnessProfile=profile;
  const names=['الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت','الأحد'];
  const chosen=(Array.isArray(profile.available_days)&&profile.available_days.length?profile.available_days:[0,1,3,5]).filter(x=>Number.isInteger(x)&&x>=0&&x<=6).slice(0,6);
  activeSchedule=chosen.map((weekday,i)=>({ ...days[i%days.length], title:names[weekday]+' – '+days[i%days.length].title.split('–')[1].trim() }));
@@ -224,4 +224,119 @@ window.renderWeeklyReview=async()=>{const out=document.getElementById('weeklyRev
 window.exerciseName=(d,i)=>{const card=document.querySelectorAll('#workouts .ex h3')[i];return card?card.textContent:'تمرين'};
 
 db.auth.onAuthStateChange((e,s)=>{if(s?.user)sessionReady(s)});let init=await db.auth.getSession();if(init.data.session)await sessionReady(init.data.session);
+</script>
+<style id="ali-fitness-v2-style">
+.ex,.lib{cursor:pointer;transition:border-color .18s,transform .18s}.ex:active,.lib:active{transform:scale(.99)}
+.ex img,.lib img{cursor:zoom-in}
+#exerciseModal{position:fixed;inset:0;z-index:100;background:#08090bf5;display:none;overflow:auto;padding:16px}
+#exerciseModal.open{display:block}
+#exerciseModal .modalbox{max-width:760px;margin:0 auto;background:#14171b;border:1px solid #5a4524;border-radius:20px;padding:16px;min-height:90vh}
+#exerciseModal .modalhead{display:flex;justify-content:space-between;align-items:center;gap:10px;position:sticky;top:-16px;background:#14171bf2;padding:8px 0;z-index:2}
+#exerciseModal .closex{background:#302719;color:#f3d99e;border:1px solid #72572b;border-radius:10px;padding:8px 13px}
+#exerciseModal .gallery{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0}
+#exerciseModal .gallery img{width:100%;height:230px;object-fit:contain;background:#090a0c;border-radius:12px;cursor:zoom-in}
+#exerciseModal .stepbox{background:#0d1013;border:1px solid #30353d;border-radius:12px;padding:12px;margin:10px 0}
+#exerciseModal .variant{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0}
+#exerciseModal .variant button{background:#0d1013;border:1px solid #45413a;color:#eee;border-radius:10px;padding:9px 12px}
+#exerciseModal .variant button.active{background:#d9ad54;color:#201706;border-color:#d9ad54}
+#imageLightbox{position:fixed;inset:0;z-index:120;background:#000f;display:none;align-items:center;justify-content:center;padding:12px}
+#imageLightbox.open{display:flex}
+#imageLightbox img{max-width:100%;max-height:88vh;object-fit:contain}
+#imageLightbox button{position:absolute;top:18px;right:18px;background:#d9ad54;color:#211706;border:0;border-radius:10px;padding:10px 14px}
+.muscle-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:12px 0}
+.muscle-tile{background:#14171b;border:1px solid #383d45;border-radius:13px;padding:13px;text-align:right;color:#f5f3ee}
+.muscle-tile b{display:block;color:#f3d99e;font-size:14px}.muscle-tile small{color:#9ba2ad}
+.exercise-subgroups{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.exercise-subgroups button{background:#181b20;border:1px solid #3b4048;color:#ddd;border-radius:20px;padding:7px 11px;font-size:11px}
+@media(max-width:520px){#exerciseModal .gallery img{height:165px}.muscle-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+<script id="ALI_FITNESS_INTERACTIVE_V2">
+(function(){
+ const muscleNames={shoulders:'الأكتاف',chest:'الصدر',back:'الظهر',arms:'الذراعان',legs:'الأرجل',core:'البطن'};
+ const subgroupMap={
+  shoulders:[['الكتف الأمامي',['anterior deltoid']],['الكتف الجانبي',['lateral deltoid','deltoid']],['الكتف الخلفي',['posterior deltoid']]],
+  chest:[['الصدر العلوي',['pectoralis major']],['الصدر الأوسط',['pectoralis']],['الصدر السفلي',['pectoralis']]],
+  back:[['الظهر العريض',['latissimus dorsi']],['منتصف الظهر',['trapezius','rhomboids']],['أسفل الظهر',['erector spinae']]],
+  arms:[['البايسبس',['biceps']],['الترايسبس',['triceps']],['الساعد',['forearm','brachioradialis']]],
+  legs:[['الفخذ الأمامي',['quadriceps']],['الفخذ الخلفي',['hamstrings']],['الأرداف',['glute']],['السمانة',['calves']]],
+  core:[['عضلات البطن',['abdominal']],['الجذع والثبات',['oblique','serratus']]]
+ };
+ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ function ensureLayers(){
+  if(!document.getElementById('exerciseModal')){let m=document.createElement('div');m.id='exerciseModal';m.innerHTML='<div class="modalbox"><div class="modalhead"><b id="modalTitle">تفاصيل التمرين</b><button class="closex" onclick="closeExercise()">إغلاق ✕</button></div><div id="modalBody"></div></div>';document.body.appendChild(m)}
+  if(!document.getElementById('imageLightbox')){let l=document.createElement('div');l.id='imageLightbox';l.innerHTML='<button onclick="closeLightbox()">إغلاق ✕</button><img id="lightboxImage" alt="صورة التمرين مكبرة">';l.addEventListener('click',e=>{if(e.target===l)closeLightbox()});document.body.appendChild(l)}
+ }
+ window.closeExercise=()=>document.getElementById('exerciseModal')?.classList.remove('open');
+ window.openLightbox=url=>{ensureLayers();document.getElementById('lightboxImage').src=url;document.getElementById('imageLightbox').classList.add('open')};
+ window.closeLightbox=()=>document.getElementById('imageLightbox')?.classList.remove('open');
+ function equipmentLabel(x){const v=(x||'').toLowerCase();if(v.includes('dumbbell'))return'دامبل';if(v.includes('barbell'))return'بار';if(v.includes('cable'))return'كيبل';if(v.includes('machine'))return'ماكينة';if(v.includes('smith'))return'Smith Machine';if(v.includes('body'))return'وزن الجسم';if(v.includes('kettlebell'))return'Kettlebell';if(v.includes('band'))return'مطاط مقاومة';return x||'معدات أخرى'}
+ function findDb(name){return data.find(x=>x.name.toLowerCase()===String(name).toLowerCase())||data.find(x=>x.name.toLowerCase().includes(String(name).toLowerCase()))}
+ function levelSettings(){
+  const p=window.currentFitnessProfile||{};
+  const level=p.training_experience||'returning',goal=p.goal||'muscle_gain';
+  let sets=level==='beginner'?2:level==='advanced'?3:2;
+  if(level==='advanced'&&goal==='muscle_gain')sets=3;
+  let reps=goal==='fat_loss'?'10–15':goal==='general_fitness'?'10–15':goal==='strength'?'6–10':'8–12';
+  if(level==='beginner'||level==='returning')reps='10–12';
+  return {sets,reps,level,goal};
+ }
+ function variantsFor(ex){
+  const primary=(ex.primaryMuscles||[]).map(x=>x.toLowerCase());
+  if(!primary.length)return [ex];
+  const all=data.filter(x=>x.category==='strength'&&x.name!==ex.name&&(x.primaryMuscles||[]).some(m=>primary.includes(m.toLowerCase())));
+  const chosen=[ex],seen=new Set([ex.name]);
+  for(const x of all){if(!seen.has(x.name)){chosen.push(x);seen.add(x.name)}}
+  return chosen.slice(0,15);
+ }
+ window.openExercise=(name,forcedName)=>{
+  ensureLayers();
+  const e=findDb(forcedName||name);
+  const dayItem=(activeSchedule||days)[didx]?.items?.find(x=>x[1]===name||x[0]===name);
+  const itemName=dayItem?.[0]||name;
+  const target=e||null;
+  const imgs=target?.images?.length?target.images.map(x=>base+x):[];
+  const primary=target?.primaryMuscles||[];
+  const secondary=target?.secondaryMuscles||[];
+  const equipment=target?.equipment||'غير محدد';
+  const steps=target?.instructions||dayItem?.[5]||[];
+  const warnings=dayItem?.[6]||'حافظ على الحركة المتحكم بها وتوقف عند الألم.';
+  const vars=target?variantsFor(target):[];
+  const st=levelSettings();
+  document.getElementById('modalTitle').textContent=itemName;
+  document.getElementById('modalBody').innerHTML=
+   '<div class="eyebrow">'+esc(target?.name||name)+'</div>'+
+   '<div class="gallery">'+(imgs.length?imgs.map((u,i)=>'<img src="'+esc(u)+'" alt="خطوة '+(i+1)+' من '+esc(itemName)+'" onclick="openLightbox(this.src)" onerror="this.style.display=\'none\'">').join(''):'<div class="stepbox">صور هذا التمرين غير متاحة حالياً في قاعدة الصور.</div>')+'</div>'+
+   '<div class="stepbox"><b>العضلات الأساسية</b><p>'+esc(primary.join('، ')||dayItem?.[2]?.join('، ')||'حسب الحركة')+'</p><b>العضلات المساعدة</b><p>'+esc(secondary.join('، ')||'')+'</p><b>المعدة المستخدمة</b><p>'+esc(equipmentLabel(equipment))+'</p></div>'+
+   '<div class="stepbox"><b>طريقة الأداء الصحيحة</b><ol>'+steps.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ol><p style="color:#e6bd72">تنبيه: '+esc(warnings)+'</p></div>'+
+   '<div class="stepbox"><b>خطة الجولات المقترحة لمستواك</b><p><strong>'+st.sets+' جولات × '+st.reps+' تكرار</strong></p><p>راحة 90–180 ثانية حسب صعوبة الحركة. اترك 2–3 تكرارات احتياطية ولا ترفع الوزن مع ألم أو خلل بالتقنية.</p></div>'+
+   '<div class="stepbox"><b>اختر طريقة أداء أخرى لنفس العضلة</b><p style="font-size:11px;color:#9ba2ad">اختر دامبل أو ماكينة أو بار أو كيبل؛ ستتغير الصور والشرح حسب اختيارك.</p><div class="variant" id="variantButtons">'+(vars.length?vars.map((v,i)=>'<button class="'+(i===0?'active':'')+'" data-ex="'+esc(v.name)+'" onclick="switchExerciseVariant(this)">'+esc(equipmentLabel(v.equipment))+' · '+esc(v.name)+'</button>').join(''):'<span>لا توجد بدائل مطابقة متاحة حالياً.</span>')+'</div></div>';
+  document.getElementById('exerciseModal').classList.add('open');
+ };
+ window.switchExerciseVariant=btn=>{const n=btn.dataset.ex;document.querySelectorAll('#variantButtons button').forEach(x=>x.classList.toggle('active',x===btn));window.openExercise(n,n)};
+ window.renderDay=function(){
+  const d=(activeSchedule||days)[didx];if(!d)return;
+  const st=levelSettings();
+  document.getElementById('intro').innerHTML='<b>'+esc(d.title)+'</b><br>'+esc(d.desc)+'<br><span style="color:#9ba2ad">الجولات والتكرارات محسوبة مبدئياً حسب مستوى خبرتك وهدفك. الراحة 2–3 دقائق للمركب و60–120 ثانية للعزل.</span>';
+  document.getElementById('workouts').innerHTML=d.items.map((e,i)=>{
+   const ex=findDb(e[1]);const img=ex?.images?.[0]?base+ex.images[0]:'';
+   return '<article class="ex" onclick="openExercise('+JSON.stringify(e[1])+')" role="button" tabindex="0"><img loading="lazy" src="'+esc(img||'https://placehold.co/400x400/14171b/d9ad54?text=Open+Exercise')+'" alt="'+esc(e[0])+'" onerror="this.src=\'https://placehold.co/400x400/14171b/d9ad54?text=Exercise\'"><div><h3>'+esc(e[0])+'</h3><div class="en">'+esc(e[1])+'</div><div class="muscles">'+e[2].map(m=>'<span>'+esc(m)+'</span>').join('')+'</div><div class="meta"><b>'+st.sets+' × '+st.reps+'</b> • '+esc(e[4])+'</div><small style="color:#f3d99e">اضغط لعرض الصور والشرح والبدائل ←</small><div class="track" onclick="event.stopPropagation()"><input id="kg'+didx+'-'+i+'" type="number" step=".5" min="0" placeholder="kg"><input id="rep'+didx+'-'+i+'" type="number" min="1" max="100" placeholder="تكرار"><select id="rpe'+didx+'-'+i+'" aria-label="صعوبة الجولة" style="width:88px;padding:6px;border-radius:8px;background:#0b0d10;color:white;border:1px solid var(--line);font-size:11px"><option value="">الصعوبة</option><option value="6">سهلة 6</option><option value="7">متوسطة 7</option><option value="8">صعبة 8</option><option value="9">صعبة جداً 9</option><option value="10">أقصى جهد 10</option></select><label style="font-size:10px;color:var(--muted);display:flex;align-items:center;gap:3px"><input id="pain'+didx+'-'+i+'" type="checkbox" style="width:auto"> ألم</label><button class="btn" onclick="event.stopPropagation();saveSet('+didx+','+i+')">سجل الجولة</button><small id="ok'+didx+'-'+i+'" style="color:var(--green)"></small></div></div></article>'
+  }).join('');
+ };
+ const oldLibrary=window.library;
+ window.library=function(){
+  const root=document.getElementById('librarygrid');if(!root||!data.length){if(oldLibrary)oldLibrary();return}
+  const q=(document.getElementById('search').value||'').toLowerCase();
+  const muscles=['shoulders','chest','back','arms','legs','core'];
+  if(flt==='all'&&!q){
+   root.innerHTML='<div class="muscle-grid" style="grid-column:1/-1">'+muscles.map(k=>{const count=data.filter(e=>e.category==='strength'&&e.images?.length&&group(e)===k).length;return '<button class="muscle-tile" onclick="filter(\''+k+'\',document.querySelector(\'.filters button:nth-child('+(muscles.indexOf(k)+2)+')\'))"><b>'+muscleNames[k]+'</b><small>'+count+' تمرين متاح</small></button>'}).join('')+'</div>';
+   document.getElementById('count').textContent='اختر مجموعة عضلية';return;
+  }
+  let a=data.filter(e=>e.category==='strength'&&e.images?.length&&(flt==='all'||group(e)===flt)&&(!q||e.name.toLowerCase().includes(q)||(e.primaryMuscles||[]).join(' ').toLowerCase().includes(q)));
+  document.getElementById('count').textContent=a.length+' تمرين';
+  const sub=(subgroupMap[flt]||[]).map(([label,terms])=>'<button onclick="document.getElementById(\'search\').value=\''+label+'\';library()">'+label+'</button>').join('');
+  root.innerHTML='<div class="exercise-subgroups" style="grid-column:1/-1">'+sub+'</div>'+a.slice(0,160).map(e=>'<div class="lib" onclick="openExercise('+JSON.stringify(e.name)+')" role="button" tabindex="0"><img loading="lazy" src="'+esc(base+e.images[0])+'" alt="'+esc(e.name)+'" onclick="event.stopPropagation();openLightbox(this.src)" onerror="this.style.display=\'none\'"><b>'+esc(e.name)+'</b><small>'+esc(ar[group(e)]||'تمارين')+' · '+esc(equipmentLabel(e.equipment))+'</small><small style="display:block;color:#f3d99e">اضغط للتفاصيل والبدائل</small></div>').join('')||'<p class="note">لا توجد نتائج لهذه العضلة.</p>';
+ };
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeLightbox();closeExercise()}});
+ ensureLayers();
+})();
 </script></body></html>
