@@ -662,30 +662,34 @@ window.selectWeekDay=function(el){document.querySelectorAll('.week-day').forEach
 (function(){
  const names=['الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت','الأحد'];
  const fmt=new Intl.DateTimeFormat('ar',{month:'long',year:'numeric',timeZone:'Europe/Berlin'});
- function renderCalendar(date,source){
+ let serverOffset=0,online=false;
+ function renderCalendar(date){
   const box=document.getElementById('weekDays');if(!box)return;
-  const d=new Date(date);const today=new Date(d.getFullYear(),d.getMonth(),d.getDate());
-  const monday=new Date(today);const offset=(today.getDay()+6)%7;monday.setDate(today.getDate()-offset);
+  const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Berlin',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(date);
+  const get=t=>parts.find(p=>p.type===t).value;
+  const today=new Date(Number(get('year')),Number(get('month'))-1,Number(get('day')));
+  const monday=new Date(today);monday.setDate(today.getDate()-((today.getDay()+6)%7));
   box.innerHTML='';
   for(let i=0;i<7;i++){
    const day=new Date(monday);day.setDate(monday.getDate()+i);
-   const b=document.createElement('button');b.type='button';b.className='week-day'+(day.toDateString()===today.toDateString()?' today':day<today?' past':'');
+   const b=document.createElement('button');b.type='button';
+   b.className='week-day'+(day.getTime()===today.getTime()?' today':day<today?' past':'');
    b.innerHTML='<small>'+names[i]+'</small><b>'+new Intl.NumberFormat('ar',{useGrouping:false}).format(day.getDate())+'</b>';
    b.setAttribute('aria-label',names[i]+' '+day.toLocaleDateString('ar'));
-   if(day.toDateString()===today.toDateString())b.setAttribute('aria-current','date');
-   b.addEventListener('click',()=>{box.querySelectorAll('.week-day').forEach(x=>x.classList.remove('selected'));b.classList.add('selected')});
+   if(day.getTime()===today.getTime())b.setAttribute('aria-current','date');
    box.appendChild(b);
   }
-  const m=document.getElementById('calendarMonth');if(m)m.textContent=fmt.format(today);
-  const sync=document.getElementById('calendarSync');if(sync)sync.textContent=source==='online'?'متزامن مع توقيت ألمانيا':'حسب تقويم الجهاز';
+  const m=document.getElementById('calendarMonth');if(m)m.textContent=fmt.format(date);
+  const sync=document.getElementById('calendarSync');if(sync)sync.textContent=online?'مزامن عبر الإنترنت · ألمانيا':'حسب تقويم الجهاز';
  }
- function local(){renderCalendar(new Date(),'device')}
- local();
+ function now(){return new Date(Date.now()+serverOffset)}
+ function refresh(){renderCalendar(now())}
+ refresh();
  fetch('https://worldtimeapi.org/api/timezone/Europe/Berlin',{cache:'no-store'})
   .then(r=>{if(!r.ok)throw new Error('time sync failed');return r.json()})
-  .then(data=>{const d=new Date(data.datetime);if(Number.isNaN(d.getTime()))throw new Error('invalid date');renderCalendar(d,'online')})
-  .catch(()=>{renderCalendar(new Date(),'device')});
- setInterval(()=>{if(document.visibilityState==='visible')renderCalendar(new Date(),'device')},60000);
- document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')renderCalendar(new Date(),'device')});
+  .then(data=>{const serverDate=new Date(data.datetime);if(Number.isNaN(serverDate.getTime()))throw new Error('invalid date');serverOffset=serverDate.getTime()-Date.now();online=true;refresh()})
+  .catch(()=>{online=false;serverOffset=0;refresh()});
+ setInterval(()=>{if(document.visibilityState==='visible')refresh()},60000);
+ document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refresh()});
 })();
 </script></body></html>
