@@ -269,7 +269,7 @@ db.auth.onAuthStateChange((e,s)=>{if(s?.user)sessionReady(s)});let init=await db
  window.closeExercise=()=>document.getElementById('exerciseModal')?.classList.remove('open');
  window.openLightbox=url=>{ensureLayers();document.getElementById('lightboxImage').src=url;document.getElementById('imageLightbox').classList.add('open')};
  window.closeLightbox=()=>document.getElementById('imageLightbox')?.classList.remove('open');
- function equipmentLabel(x){const v=(x||'').toLowerCase();if(v.includes('dumbbell'))return'دامبل';if(v.includes('barbell'))return'بار';if(v.includes('cable'))return'كيبل';if(v.includes('machine'))return'ماكينة';if(v.includes('smith'))return'Smith Machine';if(v.includes('body'))return'وزن الجسم';if(v.includes('kettlebell'))return'Kettlebell';if(v.includes('band'))return'مطاط مقاومة';return x||'معدات أخرى'}
+ function equipmentLabel(x){const v=(x||'').toLowerCase();if(v.includes('dumbbell'))return'دامبل';if(v.includes('barbell'))return'بار';if(v.includes('cable'))return'كيبل';if(v.includes('machine'))return'ماكينة';if(v.includes('smith'))return'Smith Machine';if(v.includes('body'))return'وزن الجسم';if(v.includes('kettlebell'))return'Kettlebell';if(v.includes('band'))return'مطاط مقاومة';if(v.includes('e-z'))return'بار EZ';if(v.includes('medicine ball'))return'كرة طبية';return x||'معدات أخرى'}
  function findDb(name){return data.find(x=>x.name.toLowerCase()===String(name).toLowerCase())||data.find(x=>x.name.toLowerCase().includes(String(name).toLowerCase()))}
  function levelSettings(){
   const p=window.currentFitnessProfile||{};
@@ -283,8 +283,11 @@ db.auth.onAuthStateChange((e,s)=>{if(s?.user)sessionReady(s)});let init=await db
  function variantsFor(ex){
   const primary=(ex.primaryMuscles||[]).map(x=>x.toLowerCase());
   if(!primary.length)return [ex];
-  const all=data.filter(x=>x.category==='strength'&&x.name!==ex.name&&(x.primaryMuscles||[]).some(m=>primary.includes(m.toLowerCase())));
-  const chosen=[ex],seen=new Set([ex.name]);
+  const all=data.filter(x=>x.category==='strength'&&x.images?.length&&x.name!==ex.name&&(x.primaryMuscles||[]).some(m=>primary.includes(m.toLowerCase())));
+  const chosen=[ex],seen=new Set([ex.name]),equipmentSeen=new Set([(ex.equipment||'غير محدد').toLowerCase()]);
+  // First offer one clear alternative from each available equipment type.
+  for(const x of all){const eq=(x.equipment||'غير محدد').toLowerCase();if(!equipmentSeen.has(eq)){chosen.push(x);seen.add(x.name);equipmentSeen.add(eq)}}
+  // Then add further useful variations, while keeping the list compact.
   for(const x of all){if(!seen.has(x.name)){chosen.push(x);seen.add(x.name)}}
   return chosen.slice(0,15);
  }
@@ -324,17 +327,41 @@ db.auth.onAuthStateChange((e,s)=>{if(s?.user)sessionReady(s)});let init=await db
  };
  window.filterSubgroup=(idx)=>{
   const entry=(subgroupMap[flt]||[])[idx];if(!entry)return;
-  const terms=entry[1].map(x=>x.toLowerCase());
-  const a=data.filter(e=>e.category==='strength'&&e.images?.length&&group(e)===flt&&(
-   terms.some(t=>(e.primaryMuscles||[]).concat(e.secondaryMuscles||[]).some(m=>m.toLowerCase().includes(t)))||
-   (flt==='chest'&&idx===0&&/incline/i.test(e.name))||
-   (flt==='chest'&&idx===2&&/decline/i.test(e.name))||
-   (flt==='shoulders'&&idx===1&&/lateral raise/i.test(e.name))||
-   (flt==='shoulders'&&idx===2&&/rear|reverse fly/i.test(e.name))
-  ));
+  const a=data.filter(e=>{
+   if(e.category!=='strength'||!e.images?.length||group(e)!==flt)return false;
+   const n=e.name.toLowerCase(),m=(e.primaryMuscles||[]).concat(e.secondaryMuscles||[]).join(' ').toLowerCase();
+   if(flt==='chest'){
+    if(idx===0)return /incline|low-to-high|upper chest/i.test(n);
+    if(idx===2)return /decline|high-to-low/i.test(n);
+    return /chest|bench press|push-up|fly|flye|pec deck/i.test(n)||m.includes('chest');
+   }
+   if(flt==='shoulders'){
+    if(idx===0)return /front raise|front deltoid|arnold press|shoulder press|military press|overhead press/i.test(n);
+    if(idx===1)return /lateral raise|side raise|upright row/i.test(n);
+    return /rear delt|rear lateral|rear raise|reverse fly|bent-over raise/i.test(n);
+   }
+   if(flt==='back'){
+    if(idx===0)return /lat pulldown|pull-up|chin-up|straight-arm pulldown/i.test(n)||m.includes('lats');
+    if(idx===1)return /row|t-bar|seated row/i.test(n)||m.includes('middle back')||m.includes('traps');
+    return /back extension|hyperextension|good morning|superman/i.test(n)||m.includes('lower back');
+   }
+   if(flt==='legs'){
+    if(idx===0)return m.includes('quadriceps')||/leg press|leg extension|squat/i.test(n);
+    if(idx===1)return m.includes('hamstrings')||/leg curl|romanian deadlift|stiff-legged/i.test(n);
+    if(idx===2)return m.includes('glutes')||/hip thrust|glute bridge|kickback/i.test(n);
+    return m.includes('calves')||/calf raise/i.test(n);
+   }
+   if(flt==='arms'){
+    if(idx===0)return m.includes('biceps')||/curl/i.test(n);
+    if(idx===1)return m.includes('triceps')||/triceps|skull crusher|pushdown/i.test(n);
+    return m.includes('forearms')||/wrist curl|reverse curl/i.test(n);
+   }
+   if(flt==='core')return /ab|crunch|sit-up|plank|leg raise|russian twist/i.test(n)||m.includes('abdominals');
+   return true;
+  });
   const root=document.getElementById('librarygrid');
   document.getElementById('count').textContent=a.length+' تمرين · '+entry[0];
-  root.innerHTML='<div class="exercise-subgroups" style="grid-column:1/-1"><button onclick="document.getElementById(\'search\').value=\'\';library()">عرض كل تمارين العضلة</button></div>'+
+  root.innerHTML='<div class="exercise-subgroups" style="grid-column:1/-1"><button onclick="document.getElementById(\\'search\\').value=\\'\\';library()">عرض كل تمارين العضلة</button></div>'+
    a.slice(0,160).map(e=>'<div class="lib" data-exercise="'+esc(encodeURIComponent(e.name))+'" onclick="openExercise(decodeURIComponent(this.dataset.exercise))" role="button" tabindex="0"><img loading="lazy" src="'+esc(base+e.images[0])+'" alt="'+esc(e.name)+'" onclick="event.stopPropagation();openLightbox(this.src)"><b>'+esc(e.name)+'</b><small>'+esc(equipmentLabel(e.equipment))+'</small><small style="display:block;color:#f3d99e">اضغط للتفاصيل والبدائل</small></div>').join('')||'<p class="note">لا توجد تمارين مطابقة لهذا الجزء في قاعدة الصور الحالية.</p>';
  };
  const oldLibrary=window.library;
