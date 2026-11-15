@@ -480,7 +480,7 @@ db.auth.onAuthStateChange((e,s)=>{if(s?.user)sessionReady(s)});let init=await db
 </script>
 <style id="ali-fitness-v2-style">
 .ex,.lib{cursor:pointer;transition:border-color .18s,transform .18s}.ex:active,.lib:active{transform:scale(.99)}
-.ex img,.lib img{cursor:zoom-in}
+.ex img,.lib img{cursor:pointer}
 #exerciseModal{position:fixed;inset:0;z-index:100;background:#08090bf5;display:none;overflow:auto;padding:16px}
 #exerciseModal.open{display:block}
 #exerciseModal .modalbox{max-width:760px;margin:0 auto;background:#14171b;border:1px solid #5a4524;border-radius:20px;padding:16px;min-height:90vh}
@@ -615,7 +615,7 @@ db.auth.onAuthStateChange((e,s)=>{if(s?.user)sessionReady(s)});let init=await db
   const root=document.getElementById('librarygrid');
   document.getElementById('count').textContent=a.length+' تمرين · '+entry[0];
   root.innerHTML='<div class="exercise-subgroups" style="grid-column:1/-1"><button onclick="document.getElementById(\'search\').value=\'\';library()">عرض كل تمارين العضلة</button></div>'+
-   a.slice(0,160).map(e=>'<div class="lib" data-exercise="'+esc(encodeURIComponent(e.name))+'" onclick="openExercise(decodeURIComponent(this.dataset.exercise))" role="button" tabindex="0"><img loading="lazy" src="'+esc(base+e.images[0])+'" alt="'+esc(e.name)+'" onclick="event.stopPropagation();openLightbox(this.src)"><b>'+esc(e.name)+'</b><small>'+esc(equipmentLabel(e.equipment))+'</small><small style="display:block;color:#f3d99e">اضغط للتفاصيل والبدائل</small></div>').join('')||'<p class="note">لا توجد تمارين مطابقة لهذا الجزء في قاعدة الصور الحالية.</p>';
+   a.slice(0,160).map(e=>'<div class="lib" data-exercise="'+esc(encodeURIComponent(e.name))+'" onclick="openExercise(decodeURIComponent(this.dataset.exercise))" role="button" tabindex="0"><img loading="lazy" src="'+esc(base+e.images[0])+'" alt="'+esc(e.name)+'" ><b>'+esc(e.name)+'</b><small>'+esc(equipmentLabel(e.equipment))+'</small><small style="display:block;color:#f3d99e">اضغط للتفاصيل والبدائل</small></div>').join('')||'<p class="note">لا توجد تمارين مطابقة لهذا الجزء في قاعدة الصور الحالية.</p>';
  };
  const oldLibrary=window.library;
  window.library=function(){
@@ -629,7 +629,7 @@ db.auth.onAuthStateChange((e,s)=>{if(s?.user)sessionReady(s)});let init=await db
   let a=data.filter(e=>e.category==='strength'&&e.images?.length&&(flt==='all'||group(e)===flt)&&(!q||e.name.toLowerCase().includes(q)||(e.primaryMuscles||[]).join(' ').toLowerCase().includes(q)));
   document.getElementById('count').textContent=a.length+' تمرين';
   const sub=(subgroupMap[flt]||[]).map(([label,terms],i)=>'<button onclick="filterSubgroup('+i+')">'+label+'</button>').join('');
-  root.innerHTML='<div class="exercise-subgroups" style="grid-column:1/-1">'+sub+'</div>'+a.slice(0,160).map(e=>'<div class="lib" onclick="openExercise('+JSON.stringify(e.name)+')" role="button" tabindex="0"><img loading="lazy" src="'+esc(base+e.images[0])+'" alt="'+esc(e.name)+'" onclick="event.stopPropagation();openLightbox(this.src)" onerror="this.style.display=\'none\'"><b>'+esc(e.name)+'</b><small>'+esc(ar[group(e)]||'تمارين')+' · '+esc(equipmentLabel(e.equipment))+'</small><small style="display:block;color:#f3d99e">اضغط للتفاصيل والبدائل</small></div>').join('')||'<p class="note">لا توجد نتائج لهذه العضلة.</p>';
+  root.innerHTML='<div class="exercise-subgroups" style="grid-column:1/-1">'+sub+'</div>'+a.slice(0,160).map(e=>'<div class="lib" onclick="openExercise('+JSON.stringify(e.name)+')" role="button" tabindex="0"><img loading="lazy" src="'+esc(base+e.images[0])+'" alt="'+esc(e.name)+'"  onerror="this.style.display=\'none\'"><b>'+esc(e.name)+'</b><small>'+esc(ar[group(e)]||'تمارين')+' · '+esc(equipmentLabel(e.equipment))+'</small><small style="display:block;color:#f3d99e">اضغط للتفاصيل والبدائل</small></div>').join('')||'<p class="note">لا توجد نتائج لهذه العضلة.</p>';
  };
  document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeLightbox();closeExercise()}});
  ensureLayers();
@@ -691,5 +691,28 @@ window.selectWeekDay=function(el){document.querySelectorAll('.week-day').forEach
   .catch(()=>{online=false;serverOffset=0;refresh()});
  setInterval(()=>{if(document.visibilityState==='visible')refresh()},60000);
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refresh()});
+})();
+</script><script id="ALI_EXERCISE_CARD_TAP_FIX">
+(function(){
+  // Tapping any part of an exercise card, including its photo, opens exercise details.
+  document.addEventListener('click',function(ev){
+    const img=ev.target.closest('.lib img,.ex img');
+    if(!img) return;
+    const card=img.closest('.lib,.ex');
+    if(!card) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    const encoded=card.dataset.exercise;
+    if(encoded){
+      try{window.openExercise(decodeURIComponent(encoded));}
+      catch(_){window.openExercise(encoded);}
+    }
+  },true);
+  document.addEventListener('keydown',function(ev){
+    if(ev.key==='Escape'){
+      window.closeLightbox?.();
+      window.closeExercise?.();
+    }
+  });
 })();
 </script></body></html>
