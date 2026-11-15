@@ -629,7 +629,7 @@ db.auth.onAuthStateChange((e,s)=>{if(s?.user)sessionReady(s)});let init=await db
   let a=data.filter(e=>e.category==='strength'&&e.images?.length&&(flt==='all'||group(e)===flt)&&(!q||e.name.toLowerCase().includes(q)||(e.primaryMuscles||[]).join(' ').toLowerCase().includes(q)));
   document.getElementById('count').textContent=a.length+' تمرين';
   const sub=(subgroupMap[flt]||[]).map(([label,terms],i)=>'<button onclick="filterSubgroup('+i+')">'+label+'</button>').join('');
-  root.innerHTML='<div class="exercise-subgroups" style="grid-column:1/-1">'+sub+'</div>'+a.slice(0,160).map(e=>'<div class="lib" onclick="openExercise('+JSON.stringify(e.name)+')" role="button" tabindex="0"><img loading="lazy" src="'+esc(base+e.images[0])+'" alt="'+esc(e.name)+'"  onerror="this.style.display=\'none\'"><b>'+esc(e.name)+'</b><small>'+esc(ar[group(e)]||'تمارين')+' · '+esc(equipmentLabel(e.equipment))+'</small><small style="display:block;color:#f3d99e">اضغط للتفاصيل والبدائل</small></div>').join('')||'<p class="note">لا توجد نتائج لهذه العضلة.</p>';
+  root.innerHTML='<div class="exercise-subgroups" style="grid-column:1/-1">'+sub+'</div>'+a.slice(0,160).map(e=>'<div class="lib" data-exercise="'+esc(encodeURIComponent(e.name))+'" onclick="openExercise('+JSON.stringify(e.name)+')" role="button" tabindex="0"><img loading="lazy" src="'+esc(base+e.images[0])+'" alt="'+esc(e.name)+'" onerror="this.style.display=\'none\'"><b>'+esc(e.name)+'</b><small>'+esc(ar[group(e)]||'تمارين')+' · '+esc(equipmentLabel(e.equipment))+'</small><small style="display:block;color:#f3d99e">اضغط للتفاصيل والبدائل</small></div>').join('')||'<p class="note">لا توجد نتائج لهذه العضلة.</p>';
  };
  document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeLightbox();closeExercise()}});
  ensureLayers();
@@ -704,8 +704,12 @@ window.selectWeekDay=function(el){document.querySelectorAll('.week-day').forEach
     ev.stopPropagation();
     const encoded=card.dataset.exercise;
     if(encoded){
-      try{window.openExercise(decodeURIComponent(encoded));}
-      catch(_){window.openExercise(encoded);}
+      let name=encoded;
+      try{name=decodeURIComponent(encoded)}catch(_){ }
+      window.openExercise(name);
+    } else {
+      const title=card.querySelector('b,h3');
+      if(title) window.openExercise(title.textContent.trim());
     }
   },true);
   document.addEventListener('keydown',function(ev){
