@@ -30,7 +30,7 @@ assert.match(ui, /function renderDay\(\)[\s\S]*?safeText\(e\[0\]\)[\s\S]*?safeTe
 assert.match(ui, /function openExercise\(dayIndex,index\)[\s\S]*?safeText\(base\+src\)/);
 assert.match(ui, /function showLibraryExercise\(name\)[\s\S]*?safeText\(base\+src\)/);
 assert.match(ui, /data-exercise-name="'\+safeText\(e\.name\)/);
-assert.match(ui, /async function day\(i\)/);
+assert.match(ui, /async function day\(i\)/);\nassert.match(ui, /let workoutLoadSequence=0/);\nassert.match(ui, /request!==workoutLoadSequence\\|\\|requestedDay!==didx/);
 assert.match(ui, /document.getElementById\('date'\).value=localSessionDate\(\)/);
 assert.doesNotMatch(ui, /function renderLogs|function renderSets/);
 assert.match(ui, /window\.applySchedule=/);
