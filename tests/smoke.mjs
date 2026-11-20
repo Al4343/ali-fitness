@@ -1,13 +1,15 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [html, ui, data, coach, baseMigration, sessionsMigration, aiUsageMigration, denyAiUsageMigration] = await Promise.all([
+const [html, ui, data, coach, baseMigration, sessionsMigration, indexMigration, activityMigration, aiUsageMigration, denyAiUsageMigration] = await Promise.all([
   readFile(new URL('../index.html', import.meta.url), 'utf8'),
   readFile(new URL('../assets/app-ui.js', import.meta.url), 'utf8'),
   readFile(new URL('../assets/app-data.js', import.meta.url), 'utf8'),
   readFile(new URL('../supabase/functions/fitness-coach/index.ts', import.meta.url), 'utf8'),
   readFile(new URL('../supabase/migrations/20261113155143_fitness_user_accounts_and_private_data.sql', import.meta.url), 'utf8'),
   readFile(new URL('../supabase/migrations/20261113174006_add_persistent_workout_sessions.sql', import.meta.url), 'utf8'),
+  readFile(new URL('../supabase/migrations/20261113174417_index_workout_sessions_plan_id.sql', import.meta.url), 'utf8'),
+  readFile(new URL('../supabase/migrations/20261113175212_add_activity_level_to_fitness_profiles.sql', import.meta.url), 'utf8'),
   readFile(new URL('../supabase/migrations/20261113180000_add_ai_coach_consent_and_usage.sql', import.meta.url), 'utf8'),
   readFile(new URL('../supabase/migrations/20261113180500_deny_client_access_to_ai_coach_usage.sql', import.meta.url), 'utf8'),
 ]);
@@ -52,6 +54,8 @@ assert.ok(baseMigration.includes('using ((select auth.uid()) = id)'));
 assert.ok(baseMigration.includes('with check ((select auth.uid()) = id)'));
 assert.ok(baseMigration.includes('using ((select auth.uid()) = user_id)'));
 assert.ok(baseMigration.includes('with check ((select auth.uid()) = user_id)'));
+assert.ok(indexMigration.includes('create index if not exists workout_sessions_plan_id_idx'));
+assert.ok(activityMigration.includes('add column if not exists activity_level'));
 assert.ok(sessionsMigration.includes('alter table public.workout_sessions enable row level security'));
 assert.ok(sessionsMigration.includes('using ((select auth.uid()) = user_id)'));
 assert.ok(sessionsMigration.includes('with check ((select auth.uid()) = user_id)'));
