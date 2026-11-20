@@ -60,17 +60,18 @@ Deno.serve(async (req: Request) => {
   const admin = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { count, error: countError } = await admin
+  // The database trigger serializes requests per user and enforces the rolling 24-hour cap atomically.
+  const { error: usageError } = await admin.from("ai_coach_requests").insert({ user_id: userId });
+  if (usageError?.code === "P0001" && usageError.message?.includes("AI_COACH_DAILY_LIMIT")) {
+    return json({ error: "وصلت إلى الحد اليومي: 5 أسئلة خلال آخر 24 ساعة. حاول لاحقاً." }, 429);
+  }
+  if (usageError) return json({ error: "تعذر تسجيل طلب المدرب." }, 500);
+
+  const { count: usedToday } = await admin
     .from("ai_coach_requests")
     .select("id", { count: "exact", head: true })
     .eq("user_id", userId)
-    .gte("requested_at", since);
-  if (countError) return json({ error: "تعذر التحقق من حد الاستخدام." }, 500);
-  if ((count || 0) >= 5) return json({ error: "وصلت إلى الحد اليومي: 5 أسئلة للمدرب الذكي. حاول غداً." }, 429);
-
-  const { error: usageError } = await admin.from("ai_coach_requests").insert({ user_id: userId });
-  if (usageError) return json({ error: "تعذر تسجيل طلب المدرب." }, 500);
+    .gte("requested_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
 
   const from = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString();
   const [logsResult, sessionsResult] = await Promise.all([
@@ -144,5 +145,5 @@ Deno.serve(async (req: Request) => {
   const result = await response.json();
   const answer = typeof result.output_text === "string" ? result.output_text.trim() : "";
   if (!answer) return json({ error: "لم يصل رد قابل للعرض من المدرب." }, 502);
-  return json({ answer, remainingToday: Math.max(0, 4 - (count || 0)) });
+  return json({ answer, remainingToday: Math.max(0, 5 - (usedToday ?? 5)) });
 });
