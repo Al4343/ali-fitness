@@ -50,13 +50,13 @@ assert.match(data, /window\.saveAiConsent=/);
 assert.match(coach, /https:\/\/api\.openai\.com\/v1\/responses/);
 assert.match(coach, /ai_coach_consent/);
 assert.match(coach, /AI_COACH_DAILY_LIMIT/);
-assert.match(data, /function safeMealImage\\(value\\)/);
-assert.match(data, /url\\.protocol==='https:'&&url\\.hostname==='images\\.unsplash\\.com'/);
-assert.match(data, /safeText\\(m\\.title\\)/);
-assert.match(data, /safeText\\(m\\.prepText\\)/);
-assert.match(data, /function localDateString\\(date=new Date\\(\\)\\)/);
-assert.match(data, /log_date:localDateString\\(\\)/);
-assert.doesNotMatch(data, /src="'\\+m\\.image/);
+assert.ok(data.includes('function safeMealImage(value)'));
+assert.ok(data.includes("url.protocol==='https:'&&url.hostname==='images.unsplash.com'"));
+assert.ok(data.includes('safeText(m.title)'));
+assert.ok(data.includes('safeText(m.prepText)'));
+assert.ok(data.includes('function localDateString(date=new Date())'));
+assert.ok(data.includes('log_date:localDateString()'));
+assert.doesNotMatch(data, /src="'\+m\.image/);
 
 const assistantFixture = {
   output: [
