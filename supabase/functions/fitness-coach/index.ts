@@ -52,7 +52,7 @@ Deno.serve(async (req: Request) => {
 
   const { data: profile, error: profileError } = await userClient
     .from("profiles")
-    .select("age,sex,height_cm,activity_level,goal,training_experience,available_days,dietary_pattern,preferred_training_times,ai_coach_consent")
+    .select("age,sex,activity_level,goal,training_experience,available_days,dietary_pattern,preferred_training_times,ai_coach_consent")
     .eq("id", userId)
     .single();
   if (profileError || !profile) return json({ error: "تعذر قراءة ملفك الرياضي." }, 400);
@@ -98,7 +98,6 @@ Deno.serve(async (req: Request) => {
     profile: {
       age: profile.age,
       sex: profile.sex,
-      height_cm: profile.height_cm,
       activity_level: profile.activity_level,
       goal: profile.goal,
       training_experience: profile.training_experience,
