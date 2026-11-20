@@ -69,7 +69,7 @@ jobs:
       - name: Verify least-privilege table grants
         run: |
           psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
-          DO $
+          DO $body$
           DECLARE
             tbl text;
           BEGIN
@@ -84,7 +84,7 @@ jobs:
                 RAISE EXCEPTION 'authenticated lost SELECT on public.%', tbl;
               END IF;
             END LOOP;
-          END $;
+          END $body$;
           SQL
       - name: Test concurrent per-user AI request limit
         run: bash tests/atomic-ai-rate-limit.sh
