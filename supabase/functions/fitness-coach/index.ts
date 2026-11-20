@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { extractAssistantText } from "../_shared/openai-response.js";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -143,17 +144,7 @@ Deno.serve(async (req: Request) => {
   }
 
   const result = await response.json();
-  // This function calls the REST API with fetch (not the OpenAI SDK), so read text
-  // from the Responses API output items instead of relying on the SDK-only output_text helper.
-  const answer = Array.isArray(result.output)
-    ? result.output
-      .filter((item: { type?: string; role?: string }) => item?.type === "message" && item?.role === "assistant")
-      .flatMap((item: { content?: unknown[] }) => Array.isArray(item.content) ? item.content : [])
-      .filter((part: { type?: string; text?: unknown }) => part?.type === "output_text" && typeof part.text === "string")
-      .map((part: { text: string }) => part.text)
-      .join(" ")
-      .trim()
-    : "";
+  const answer = extractAssistantText(result);
   if (!answer) return json({ error: "لم يصل رد قابل للعرض من المدرب." }, 502);
   return json({ answer, remainingToday: Math.max(0, 5 - (usedToday ?? 5)) });
 });
