@@ -28,6 +28,8 @@ assert.match(data, /function loadProfileSettings/);
 assert.match(data, /onboarding_completed:false/);
 assert.match(data, /const plansCreated=await createInitialPlans/);
 assert.match(data, /return true;/);
+assert.match(data, /let sessionReadyUserId=null,sessionReadyPromise=null/);
+assert.match(data, /sessionReadyUserId===s.user.id&&sessionReadyPromise/);
 assert.match(data, /window\.saveWorkoutSession/);
 assert.match(data, /window\.fetchWorkoutSession/);
 assert.match(data, /db\.functions\.invoke\('fitness-coach'/);
