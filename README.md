@@ -21,8 +21,9 @@ Arabic-first personal training and nutrition web app. Designed for mobile first,
 - `assets/app-ui.js`: workout UI, schedule generation, and browser interactions.
 - `assets/app-data.js`: Supabase Auth, data access, nutrition calculations, progress analysis, and AI chat client.
 - `supabase/functions/fitness-coach/index.ts`: authenticated AI coach Edge Function.
+- `supabase/functions/_shared/openai-response.js`: tested extraction of assistant text from raw OpenAI Responses API payloads.
 - `supabase/migrations/`: database schema, RLS, and atomic AI usage-limit migrations.
-- `tests/smoke.mjs`: static integration smoke checks.
+- `tests/smoke.mjs`: integration smoke checks plus executable unit tests for OpenAI response parsing.
 - `tests/atomic-ai-rate-limit.sh`: real PostgreSQL concurrency test for the per-user AI request cap.
 - `.github/workflows/validate.yml`: syntax and smoke-test workflow.
 
