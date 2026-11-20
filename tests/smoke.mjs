@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { extractAssistantText } from '../supabase/functions/_shared/openai-response.js';
 
 const [html, ui, data, coach, baseMigration, sessionsMigration, indexMigration, activityMigration, aiUsageMigration, denyAiUsageMigration, atomicAiLimitMigration] = await Promise.all([
   readFile(new URL('../index.html', import.meta.url), 'utf8'),
@@ -49,6 +50,23 @@ assert.match(data, /window\.saveAiConsent=/);
 assert.match(coach, /https:\/\/api\.openai\.com\/v1\/responses/);
 assert.match(coach, /ai_coach_consent/);
 assert.match(coach, /AI_COACH_DAILY_LIMIT/);
+
+const assistantFixture = {
+  output: [
+    { type: 'reasoning', summary: [] },
+    { type: 'function_call', name: 'ignored_tool' },
+    { type: 'message', role: 'user', content: [{ type: 'output_text', text: 'ignore user' }] },
+    { type: 'message', role: 'assistant', content: [
+      { type: 'output_text', text: 'مرحباً' },
+      { type: 'refusal', refusal: 'ignored non-text content' },
+      { type: 'output_text', text: 'بك' },
+    ] },
+  ],
+};
+assert.equal(extractAssistantText(assistantFixture), 'مرحباً بك');
+assert.equal(extractAssistantText({ output: [] }), '');
+assert.equal(extractAssistantText({ output: null }), '');
+assert.equal(extractAssistantText(null), '');
 assert.match(coach, /Array\.isArray\(result\.output\)/);
 assert.match(coach, /item\?\.type === "message"/);
 assert.match(coach, /part\?\.type === "output_text"/);
