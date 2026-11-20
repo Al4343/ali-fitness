@@ -10,8 +10,8 @@ const [html, ui, data, coach, baseMigration, sessionsMigration, indexMigration, 
   readFile(new URL('../supabase/migrations/20261113174006_add_persistent_workout_sessions.sql', import.meta.url), 'utf8'),
   readFile(new URL('../supabase/migrations/20261113174417_index_workout_sessions_plan_id.sql', import.meta.url), 'utf8'),
   readFile(new URL('../supabase/migrations/20261113175212_add_activity_level_to_fitness_profiles.sql', import.meta.url), 'utf8'),
-  readFile(new URL('../supabase/migrations/20261113180000_add_ai_coach_consent_and_usage.sql', import.meta.url), 'utf8'),
-  readFile(new URL('../supabase/migrations/20261113180500_deny_client_access_to_ai_coach_usage.sql', import.meta.url), 'utf8'),
+  readFile(new URL('../supabase/migrations/20261113180149_add_ai_coach_consent_and_usage.sql', import.meta.url), 'utf8'),
+  readFile(new URL('../supabase/migrations/20261113180436_deny_client_access_to_ai_coach_usage.sql', import.meta.url), 'utf8'),
 ]);
 
 assert.match(html, /\.\/assets\/app\.css/);
