@@ -42,7 +42,9 @@ assert.match(data, /db\.functions\.invoke\('fitness-coach'/);
 assert.match(data, /window\.saveAiConsent=/);
 assert.match(coach, /https:\/\/api\.openai\.com\/v1\/responses/);
 assert.match(coach, /ai_coach_consent/);
-assert.match(coach, /AI_COACH_DAILY_LIMIT/);\nassert.match(coach, /usageError\\?\\.code === \\"P0001\\"/);\nassert.doesNotMatch(coach, /const \\{ count, error: countError \\} = await admin/);
+assert.match(coach, /AI_COACH_DAILY_LIMIT/);
+assert.match(coach, /usageError\?\.code === "P0001"/);
+assert.doesNotMatch(coach, /const \{ count, error: countError \} = await admin/);
 assert.doesNotMatch(coach, /health_constraints|body_assessments/);
 
 // Security regression checks: all personal tables must keep RLS and ownership checks.
