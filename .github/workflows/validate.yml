@@ -1,0 +1,93 @@
+name: Validate ALI FITNESS PRO
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, redesign/ali-fitness-pro]
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: ali_fitness_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ali_fitness_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ali_fitness_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check classic UI script syntax
+        run: node --check assets/app-ui.js
+      - name: Check ES module syntax
+        run: |
+          node --input-type=module --check < assets/app-data.js
+          node --input-type=module --check < supabase/functions/delete-account/index.ts
+      - name: Run application smoke tests
+        run: node tests/smoke.mjs
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      - name: Prepare isolated Supabase-like database
+        run: |
+          psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          create role anon nologin;
+          create role authenticated nologin;
+          create role service_role nologin bypassrls;
+          create schema auth;
+          create table auth.users (id uuid primary key);
+          create function auth.uid() returns uuid
+            language sql stable
+            as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+          grant usage on schema auth to authenticated;
+          grant execute on function auth.uid() to authenticated;
+          create table public.ai_coach_requests (
+            id uuid primary key default gen_random_uuid(),
+            user_id uuid not null references auth.users(id),
+            requested_at timestamptz not null default now()
+          );
+          SQL
+      - name: Apply real personal-data schema and ownership policies
+        run: |
+          psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261113155143_fitness_user_accounts_and_private_data.sql
+          psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261113174006_add_persistent_workout_sessions.sql
+      - name: Apply atomic rate-limit migration
+        run: psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261120154250_atomic_ai_coach_daily_limit.sql
+      - name: Apply anonymous-grant hardening migration
+        run: psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261120190500_revoke_anon_access_to_personal_tables.sql
+      - name: Verify least-privilege table grants
+        run: |
+          psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          DO $body$
+          DECLARE
+            tbl text;
+          BEGIN
+            FOREACH tbl IN ARRAY ARRAY['profiles','body_assessments','workout_plans','workout_logs','nutrition_plans','daily_hydration','supplement_plans','workout_sessions'] LOOP
+              IF EXISTS (
+                SELECT 1 FROM information_schema.role_table_grants
+                WHERE table_schema='public' AND table_name=tbl AND grantee='anon'
+              ) THEN
+                RAISE EXCEPTION 'anon still has grants on public.%', tbl;
+              END IF;
+              IF NOT has_table_privilege('authenticated', 'public.' || quote_ident(tbl), 'SELECT') THEN
+                RAISE EXCEPTION 'authenticated lost SELECT on public.%', tbl;
+              END IF;
+            END LOOP;
+          END $body$;
+          SQL
+      - name: Test real two-user RLS isolation and write boundaries
+        run: psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/rls-isolation.sql
+      - name: Test concurrent per-user AI request limit
+        run: bash tests/atomic-ai-rate-limit.sh
