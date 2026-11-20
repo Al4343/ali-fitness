@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { extractAssistantText } from '../supabase/functions/_shared/openai-response.js';
 
-const [html, ui, data, coach, baseMigration, sessionsMigration, indexMigration, activityMigration, aiUsageMigration, denyAiUsageMigration, atomicAiLimitMigration, anonGrantMigration] = await Promise.all([
+const [html, ui, data, coach, baseMigration, sessionsMigration, indexMigration, activityMigration, aiUsageMigration, denyAiUsageMigration, atomicAiLimitMigration, anonGrantMigration, deleteAccount] = await Promise.all([
   readFile(new URL('../index.html', import.meta.url), 'utf8'),
   readFile(new URL('../assets/app-ui.js', import.meta.url), 'utf8'),
   readFile(new URL('../assets/app-data.js', import.meta.url), 'utf8'),
@@ -15,6 +15,7 @@ const [html, ui, data, coach, baseMigration, sessionsMigration, indexMigration, 
   readFile(new URL('../supabase/migrations/20261113180436_deny_client_access_to_ai_coach_usage.sql', import.meta.url), 'utf8'),
   readFile(new URL('../supabase/migrations/20261120154250_atomic_ai_coach_daily_limit.sql', import.meta.url), 'utf8'),
   readFile(new URL('../supabase/migrations/20261120190500_revoke_anon_access_to_personal_tables.sql', import.meta.url), 'utf8'),
+  readFile(new URL('../supabase/functions/delete-account/index.ts', import.meta.url), 'utf8'),
 ]);
 
 assert.match(html, /\.\/assets\/app\.css/);
@@ -53,6 +54,13 @@ assert.match(data, /window\.saveAiConsent=/);
 assert.match(coach, /https:\/\/api\.openai\.com\/v1\/responses/);
 assert.match(coach, /ai_coach_consent/);
 assert.match(coach, /AI_COACH_DAILY_LIMIT/);
+assert.match(html, /onclick="exportMyData\(\)"/);
+assert.match(html, /onclick="deleteMyAccount\(\)"/);
+assert.match(data, /db\.functions\.invoke\('delete-account'/);
+assert.ok(deleteAccount.includes('auth.getUser()'));
+assert.ok(deleteAccount.includes('admin.auth.admin.deleteUser(authData.user.id)'));
+assert.ok(deleteAccount.includes('payload?.confirmation !== "DELETE"'));
+assert.doesNotMatch(deleteAccount, /payload\.userId|payload\.user_id/);
 assert.ok(data.includes('function safeMealImage(value)'));
 assert.ok(data.includes("url.protocol==='https:'&&url.hostname==='images.unsplash.com'"));
 assert.ok(data.includes('safeText(m.title)'));
