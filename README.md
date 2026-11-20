@@ -21,7 +21,7 @@ Arabic-first personal training and nutrition web app. Designed for mobile first,
 - `assets/app-ui.js`: workout UI, schedule generation, and browser interactions.
 - `assets/app-data.js`: Supabase Auth, data access, nutrition calculations, progress analysis, and AI chat client.
 - `supabase/functions/fitness-coach/index.ts`: authenticated AI coach Edge Function.
-- `supabase/migrations/`: database schema and RLS migrations.
+- `supabase/migrations/`: database schema, RLS, and atomic AI usage-limit migrations.
 - `tests/smoke.mjs`: static integration smoke checks.
 - `.github/workflows/validate.yml`: syntax and smoke-test workflow.
 
@@ -38,7 +38,7 @@ Arabic-first personal training and nutrition web app. Designed for mobile first,
 
 The client-side publishable key is expected to be visible in a static web app. Data privacy is enforced by Supabase Auth and RLS policies, not by hiding that key.
 
-The AI coach sends the consenting user's question, selected profile fields, and last 28 days of workout logs/sessions to the OpenAI API. It does not send email, injury/health notes, allergy notes, or body measurements. Users are warned not to include sensitive medical details in their question. Consent is stored per profile and can be withdrawn in the coach screen. The Edge Function enforces a rolling limit of five questions per user per 24 hours. OpenAI API usage may incur separate charges.
+The AI coach sends the consenting user's question, selected profile fields, and last 28 days of workout logs/sessions to the OpenAI API. It does not send email, injury/health notes, allergy notes, or body measurements. Users are warned not to include sensitive medical details in their question. Consent is stored per profile and can be withdrawn in the coach screen. The Edge Function enforces a rolling limit of five questions per user per 24 hours. Enforcement happens in a private Postgres trigger that takes a transaction-scoped advisory lock per user before counting and inserting, so concurrent requests cannot race past the cap. The Edge Function maps the database limit error to HTTP 429. OpenAI API usage may incur separate charges.
 
 ## Deploy
 
