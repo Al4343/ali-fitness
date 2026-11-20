@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { extractAssistantText } from '../supabase/functions/_shared/openai-response.js';
 
-const [html, ui, data, coach, baseMigration, sessionsMigration, indexMigration, activityMigration, aiUsageMigration, denyAiUsageMigration, atomicAiLimitMigration] = await Promise.all([
+const [html, ui, data, coach, baseMigration, sessionsMigration, indexMigration, activityMigration, aiUsageMigration, denyAiUsageMigration, atomicAiLimitMigration, anonGrantMigration] = await Promise.all([
   readFile(new URL('../index.html', import.meta.url), 'utf8'),
   readFile(new URL('../assets/app-ui.js', import.meta.url), 'utf8'),
   readFile(new URL('../assets/app-data.js', import.meta.url), 'utf8'),
@@ -14,6 +14,7 @@ const [html, ui, data, coach, baseMigration, sessionsMigration, indexMigration, 
   readFile(new URL('../supabase/migrations/20261113180149_add_ai_coach_consent_and_usage.sql', import.meta.url), 'utf8'),
   readFile(new URL('../supabase/migrations/20261113180436_deny_client_access_to_ai_coach_usage.sql', import.meta.url), 'utf8'),
   readFile(new URL('../supabase/migrations/20261120154250_atomic_ai_coach_daily_limit.sql', import.meta.url), 'utf8'),
+  readFile(new URL('../supabase/migrations/20261120190500_revoke_anon_access_to_personal_tables.sql', import.meta.url), 'utf8'),
 ]);
 
 assert.match(html, /\.\/assets\/app\.css/);
@@ -102,6 +103,11 @@ assert.ok(atomicAiLimitMigration.includes("message = 'AI_COACH_DAILY_LIMIT'"));
 assert.ok(atomicAiLimitMigration.includes('before insert on public.ai_coach_requests'));
 assert.ok(atomicAiLimitMigration.includes('security invoker'));
 assert.ok(atomicAiLimitMigration.includes("set search_path = ''"));
+assert.ok(anonGrantMigration.includes('revoke all privileges on table'));
+assert.ok(anonGrantMigration.includes('from anon;'));
+for (const table of ['profiles', 'body_assessments', 'workout_plans', 'workout_logs', 'nutrition_plans', 'daily_hydration', 'supplement_plans', 'workout_sessions']) {
+  assert.ok(anonGrantMigration.includes(`public.${table}`), `anon grants must be revoked from ${table}`);
+}
 assert.doesNotMatch(data, /\b(activeSchedule|activeScheduleBase|didx|renderDay)\b/);
 
 const declaredIds = new Set([...html.matchAll(/\bid=["']([^"']+)["']/g)].map((m) => m[1]));
