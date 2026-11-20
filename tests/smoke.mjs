@@ -76,7 +76,7 @@ assert.equal(extractAssistantText({ output: null }), '');
 assert.equal(extractAssistantText(null), '');
 assert.match(coach, /usageError\?\.code === "P0001"/);
 assert.doesNotMatch(coach, /const \{ count, error: countError \} = await admin/);
-assert.doesNotMatch(coach, /health_constraints|body_assessments/);
+assert.doesNotMatch(coach, /health_constraints|body_assessments|height_cm/);
 
 // Security regression checks: all personal tables must keep RLS and ownership checks.
 for (const table of ['profiles', 'body_assessments', 'workout_plans', 'workout_logs', 'nutrition_plans', 'daily_hydration', 'supplement_plans']) {
