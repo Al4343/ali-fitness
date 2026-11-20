@@ -40,7 +40,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y postgresql-client
-      - name: Prepare isolated database schema for migration test
+      - name: Prepare isolated Supabase-like database
         run: |
           psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
           create role anon nologin;
@@ -48,22 +48,21 @@ jobs:
           create role service_role nologin bypassrls;
           create schema auth;
           create table auth.users (id uuid primary key);
+          create function auth.uid() returns uuid
+            language sql stable
+            as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+          grant usage on schema auth to authenticated;
+          grant execute on function auth.uid() to authenticated;
           create table public.ai_coach_requests (
             id uuid primary key default gen_random_uuid(),
             user_id uuid not null references auth.users(id),
             requested_at timestamptz not null default now()
           );
-          create table public.profiles (id uuid primary key);
-          create table public.body_assessments (id uuid primary key);
-          create table public.workout_plans (id uuid primary key);
-          create table public.workout_logs (id uuid primary key);
-          create table public.nutrition_plans (id uuid primary key);
-          create table public.daily_hydration (id uuid primary key);
-          create table public.supplement_plans (id uuid primary key);
-          create table public.workout_sessions (id uuid primary key);
-          grant all on public.profiles, public.body_assessments, public.workout_plans, public.workout_logs, public.nutrition_plans, public.daily_hydration, public.supplement_plans, public.workout_sessions to anon;
-          grant select on public.profiles, public.body_assessments, public.workout_plans, public.workout_logs, public.nutrition_plans, public.daily_hydration, public.supplement_plans, public.workout_sessions to authenticated;
           SQL
+      - name: Apply real personal-data schema and ownership policies
+        run: |
+          psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261113155143_fitness_user_accounts_and_private_data.sql
+          psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261113174006_add_persistent_workout_sessions.sql
       - name: Apply atomic rate-limit migration
         run: psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261120154250_atomic_ai_coach_daily_limit.sql
       - name: Apply anonymous-grant hardening migration
@@ -88,5 +87,7 @@ jobs:
             END LOOP;
           END $body$;
           SQL
+      - name: Test real two-user RLS isolation and write boundaries
+        run: psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/rls-isolation.sql
       - name: Test concurrent per-user AI request limit
         run: bash tests/atomic-ai-rate-limit.sh
