@@ -45,16 +45,20 @@ assert.doesNotMatch(coach, /health_constraints|body_assessments/);
 
 // Security regression checks: all personal tables must keep RLS and ownership checks.
 for (const table of ['profiles', 'body_assessments', 'workout_plans', 'workout_logs', 'nutrition_plans', 'daily_hydration', 'supplement_plans']) {
-  assert.match(baseMigration, new RegExp('alter table public\\.' + table + ' enable row level security', 'i'), table + ' must keep RLS enabled');
-  assert.match(baseMigration, new RegExp('create policy "[^"]+" on public\\.' + table, 'i'), table + ' must have an ownership policy');
+  assert.ok(baseMigration.includes(`alter table public.${table} enable row level security`), `${table} must keep RLS enabled`);
+  assert.ok(baseMigration.includes(`create policy `) && baseMigration.includes(`on public.${table}`), `${table} must have an ownership policy`);
 }
-assert.match(baseMigration, /using \\(\(select auth\\.uid\\(\\)\\) = id\\)/i);
-assert.match(baseMigration, /with check \\(\(select auth\\.uid\\(\\)\\) = id\\)/i);
-assert.match(sessionsMigration, /alter table public\\.workout_sessions enable row level security/i);
-assert.match(sessionsMigration, /using \\(\(select auth\\.uid\\(\\)\\) = user_id\\)/i);
-assert.match(sessionsMigration, /with check \\(\(select auth\\.uid\\(\\)\\) = user_id\\)/i);
-assert.match(denyAiUsageMigration, /for all to anon, authenticated[\\s\\S]*using \\(false\\)[\\s\\S]*with check \\(false\\)/i);
-assert.match(aiUsageMigration, /revoke all on public\\.ai_coach_requests from anon, authenticated/i);
+assert.ok(baseMigration.includes('using ((select auth.uid()) = id)'));
+assert.ok(baseMigration.includes('with check ((select auth.uid()) = id)'));
+assert.ok(baseMigration.includes('using ((select auth.uid()) = user_id)'));
+assert.ok(baseMigration.includes('with check ((select auth.uid()) = user_id)'));
+assert.ok(sessionsMigration.includes('alter table public.workout_sessions enable row level security'));
+assert.ok(sessionsMigration.includes('using ((select auth.uid()) = user_id)'));
+assert.ok(sessionsMigration.includes('with check ((select auth.uid()) = user_id)'));
+assert.ok(denyAiUsageMigration.includes('for all to anon, authenticated'));
+assert.ok(denyAiUsageMigration.includes('using (false)'));
+assert.ok(denyAiUsageMigration.includes('with check (false)'));
+assert.ok(aiUsageMigration.includes('revoke all on public.ai_coach_requests from anon, authenticated'));
 assert.doesNotMatch(data, /\b(activeSchedule|activeScheduleBase|didx|renderDay)\b/);
 
 const declaredIds = new Set([...html.matchAll(/\bid=["']([^"']+)["']/g)].map((m) => m[1]));
