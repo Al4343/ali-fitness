@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [html, ui, data, coach, baseMigration, sessionsMigration, indexMigration, activityMigration, aiUsageMigration, denyAiUsageMigration] = await Promise.all([
+const [html, ui, data, coach, baseMigration, sessionsMigration, indexMigration, activityMigration, aiUsageMigration, denyAiUsageMigration, atomicAiLimitMigration] = await Promise.all([
   readFile(new URL('../index.html', import.meta.url), 'utf8'),
   readFile(new URL('../assets/app-ui.js', import.meta.url), 'utf8'),
   readFile(new URL('../assets/app-data.js', import.meta.url), 'utf8'),
@@ -11,7 +11,7 @@ const [html, ui, data, coach, baseMigration, sessionsMigration, indexMigration, 
   readFile(new URL('../supabase/migrations/20261113174417_index_workout_sessions_plan_id.sql', import.meta.url), 'utf8'),
   readFile(new URL('../supabase/migrations/20261113175212_add_activity_level_to_fitness_profiles.sql', import.meta.url), 'utf8'),
   readFile(new URL('../supabase/migrations/20261113180149_add_ai_coach_consent_and_usage.sql', import.meta.url), 'utf8'),
-  readFile(new URL('../supabase/migrations/20261113180436_deny_client_access_to_ai_coach_usage.sql', import.meta.url), 'utf8'),
+  readFile(new URL('../supabase/migrations/20261113180436_deny_client_access_to_ai_coach_usage.sql', import.meta.url), 'utf8'),\n  readFile(new URL('../supabase/migrations/20261120154250_atomic_ai_coach_daily_limit.sql', import.meta.url), 'utf8'),
 ]);
 
 assert.match(html, /\.\/assets\/app\.css/);
@@ -42,7 +42,7 @@ assert.match(data, /db\.functions\.invoke\('fitness-coach'/);
 assert.match(data, /window\.saveAiConsent=/);
 assert.match(coach, /https:\/\/api\.openai\.com\/v1\/responses/);
 assert.match(coach, /ai_coach_consent/);
-assert.match(coach, />= 5/);
+assert.match(coach, /AI_COACH_DAILY_LIMIT/);\nassert.match(coach, /usageError\\?\\.code === \\"P0001\\"/);\nassert.doesNotMatch(coach, /const \\{ count, error: countError \\} = await admin/);
 assert.doesNotMatch(coach, /health_constraints|body_assessments/);
 
 // Security regression checks: all personal tables must keep RLS and ownership checks.
@@ -62,7 +62,7 @@ assert.ok(sessionsMigration.includes('with check ((select auth.uid()) = user_id)
 assert.ok(denyAiUsageMigration.includes('for all to anon, authenticated'));
 assert.ok(denyAiUsageMigration.includes('using (false)'));
 assert.ok(denyAiUsageMigration.includes('with check (false)'));
-assert.ok(aiUsageMigration.includes('revoke all on public.ai_coach_requests from anon, authenticated'));
+assert.ok(aiUsageMigration.includes('revoke all on public.ai_coach_requests from anon, authenticated'));\nassert.ok(atomicAiLimitMigration.includes('pg_advisory_xact_lock'));\nassert.ok(atomicAiLimitMigration.includes('hashtextextended(new.user_id::text, 0)'));\nassert.ok(atomicAiLimitMigration.includes("message = 'AI_COACH_DAILY_LIMIT'"));\nassert.ok(atomicAiLimitMigration.includes('before insert on public.ai_coach_requests'));\nassert.ok(atomicAiLimitMigration.includes('security invoker'));\nassert.ok(atomicAiLimitMigration.includes("set search_path = ''"));
 assert.doesNotMatch(data, /\b(activeSchedule|activeScheduleBase|didx|renderDay)\b/);
 
 const declaredIds = new Set([...html.matchAll(/\bid=["']([^"']+)["']/g)].map((m) => m[1]));
