@@ -65,7 +65,13 @@ assert.ok(sessionsMigration.includes('with check ((select auth.uid()) = user_id)
 assert.ok(denyAiUsageMigration.includes('for all to anon, authenticated'));
 assert.ok(denyAiUsageMigration.includes('using (false)'));
 assert.ok(denyAiUsageMigration.includes('with check (false)'));
-assert.ok(aiUsageMigration.includes('revoke all on public.ai_coach_requests from anon, authenticated'));\nassert.ok(atomicAiLimitMigration.includes('pg_advisory_xact_lock'));\nassert.ok(atomicAiLimitMigration.includes('hashtextextended(new.user_id::text, 0)'));\nassert.ok(atomicAiLimitMigration.includes("message = 'AI_COACH_DAILY_LIMIT'"));\nassert.ok(atomicAiLimitMigration.includes('before insert on public.ai_coach_requests'));\nassert.ok(atomicAiLimitMigration.includes('security invoker'));\nassert.ok(atomicAiLimitMigration.includes("set search_path = ''"));
+assert.ok(aiUsageMigration.includes('revoke all on public.ai_coach_requests from anon, authenticated'));
+assert.ok(atomicAiLimitMigration.includes('pg_advisory_xact_lock'));
+assert.ok(atomicAiLimitMigration.includes('hashtextextended(new.user_id::text, 0)'));
+assert.ok(atomicAiLimitMigration.includes("message = 'AI_COACH_DAILY_LIMIT'"));
+assert.ok(atomicAiLimitMigration.includes('before insert on public.ai_coach_requests'));
+assert.ok(atomicAiLimitMigration.includes('security invoker'));
+assert.ok(atomicAiLimitMigration.includes("set search_path = ''"));
 assert.doesNotMatch(data, /\b(activeSchedule|activeScheduleBase|didx|renderDay)\b/);
 
 const declaredIds = new Set([...html.matchAll(/\bid=["']([^"']+)["']/g)].map((m) => m[1]));
