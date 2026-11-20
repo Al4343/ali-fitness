@@ -151,7 +151,7 @@ Deno.serve(async (req: Request) => {
       .flatMap((item: { content?: unknown[] }) => Array.isArray(item.content) ? item.content : [])
       .filter((part: { type?: string; text?: unknown }) => part?.type === "output_text" && typeof part.text === "string")
       .map((part: { text: string }) => part.text)
-      .join("\\n")
+      .join(" ")
       .trim()
     : "";
   if (!answer) return json({ error: "لم يصل رد قابل للعرض من المدرب." }, 502);
