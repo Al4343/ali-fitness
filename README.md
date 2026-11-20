@@ -9,6 +9,7 @@ Arabic-first personal training and nutrition web app. Designed for mobile first,
 - Exercise library with exercise images, technique instructions, muscle groups, and equipment alternatives.
 - Workout completion tracking, previous-performance prefill, and workout-set logging.
 - Body measurements: weight, waist, chest, arm, and thigh.
+- Account data export (JSON) and self-service account deletion with server-side identity verification.
 - Seven-day meal calendar with ingredients, preparation steps, and dietary-pattern substitutions.
 - Nutrition estimates based on age, height, weight, goal, and self-reported daily activity. Users under 18 do not receive calorie or macro targets.
 - Supplement education with safety notes.
@@ -21,6 +22,7 @@ Arabic-first personal training and nutrition web app. Designed for mobile first,
 - `assets/app-ui.js`: workout UI, schedule generation, and browser interactions.
 - `assets/app-data.js`: Supabase Auth, data access, nutrition calculations, progress analysis, and AI chat client.
 - `supabase/functions/fitness-coach/index.ts`: authenticated AI coach Edge Function.
+- `supabase/functions/delete-account/index.ts`: authenticated self-service account deletion; linked personal records are removed through foreign-key cascades.
 - `supabase/functions/_shared/openai-response.js`: tested extraction of assistant text from raw OpenAI Responses API payloads.
 - `supabase/migrations/`: database schema, RLS, atomic AI usage-limit enforcement, and explicit removal of anonymous-role grants on personal tables.
 - `tests/smoke.mjs`: integration smoke checks plus executable unit tests for OpenAI response parsing, meal-rendering safety guards, and local calendar-date handling.
