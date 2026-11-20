@@ -23,6 +23,7 @@ Arabic-first personal training and nutrition web app. Designed for mobile first,
 - `supabase/functions/fitness-coach/index.ts`: authenticated AI coach Edge Function.
 - `supabase/migrations/`: database schema, RLS, and atomic AI usage-limit migrations.
 - `tests/smoke.mjs`: static integration smoke checks.
+- `tests/atomic-ai-rate-limit.sh`: real PostgreSQL concurrency test for the per-user AI request cap.
 - `.github/workflows/validate.yml`: syntax and smoke-test workflow.
 
 ## Supabase setup
@@ -54,7 +55,7 @@ node --input-type=module --check < assets/app-data.js
 node tests/smoke.mjs
 ```
 
-GitHub Actions runs these checks for pushes and pull requests.
+GitHub Actions runs these checks for pushes and pull requests, starts an isolated PostgreSQL service, applies the atomic-limit migration, and verifies that six concurrent requests produce exactly five successes and one rejection.
 
 ## Important limitations before public launch
 
