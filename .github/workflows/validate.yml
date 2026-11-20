@@ -51,8 +51,40 @@ jobs:
             user_id uuid not null references auth.users(id),
             requested_at timestamptz not null default now()
           );
+          create table public.profiles (id uuid primary key);
+          create table public.body_assessments (id uuid primary key);
+          create table public.workout_plans (id uuid primary key);
+          create table public.workout_logs (id uuid primary key);
+          create table public.nutrition_plans (id uuid primary key);
+          create table public.daily_hydration (id uuid primary key);
+          create table public.supplement_plans (id uuid primary key);
+          create table public.workout_sessions (id uuid primary key);
+          grant all on public.profiles, public.body_assessments, public.workout_plans, public.workout_logs, public.nutrition_plans, public.daily_hydration, public.supplement_plans, public.workout_sessions to anon;
+          grant select on public.profiles, public.body_assessments, public.workout_plans, public.workout_logs, public.nutrition_plans, public.daily_hydration, public.supplement_plans, public.workout_sessions to authenticated;
           SQL
       - name: Apply atomic rate-limit migration
         run: psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261120154250_atomic_ai_coach_daily_limit.sql
+      - name: Apply anonymous-grant hardening migration
+        run: psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261120190500_revoke_anon_access_to_personal_tables.sql
+      - name: Verify least-privilege table grants
+        run: |
+          psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          DO $
+          DECLARE
+            tbl text;
+          BEGIN
+            FOREACH tbl IN ARRAY ARRAY['profiles','body_assessments','workout_plans','workout_logs','nutrition_plans','daily_hydration','supplement_plans','workout_sessions'] LOOP
+              IF EXISTS (
+                SELECT 1 FROM information_schema.role_table_grants
+                WHERE table_schema='public' AND table_name=tbl AND grantee='anon'
+              ) THEN
+                RAISE EXCEPTION 'anon still has grants on public.%', tbl;
+              END IF;
+              IF NOT has_table_privilege('authenticated', 'public.' || quote_ident(tbl), 'SELECT') THEN
+                RAISE EXCEPTION 'authenticated lost SELECT on public.%', tbl;
+              END IF;
+            END LOOP;
+          END $;
+          SQL
       - name: Test concurrent per-user AI request limit
         run: bash tests/atomic-ai-rate-limit.sh
