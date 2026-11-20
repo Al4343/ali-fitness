@@ -1,11 +1,15 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [html, ui, data, coach] = await Promise.all([
+const [html, ui, data, coach, baseMigration, sessionsMigration, aiUsageMigration, denyAiUsageMigration] = await Promise.all([
   readFile(new URL('../index.html', import.meta.url), 'utf8'),
   readFile(new URL('../assets/app-ui.js', import.meta.url), 'utf8'),
   readFile(new URL('../assets/app-data.js', import.meta.url), 'utf8'),
   readFile(new URL('../supabase/functions/fitness-coach/index.ts', import.meta.url), 'utf8'),
+  readFile(new URL('../supabase/migrations/20261113155143_fitness_user_accounts_and_private_data.sql', import.meta.url), 'utf8'),
+  readFile(new URL('../supabase/migrations/20261113174006_add_persistent_workout_sessions.sql', import.meta.url), 'utf8'),
+  readFile(new URL('../supabase/migrations/20261113180000_add_ai_coach_consent_and_usage.sql', import.meta.url), 'utf8'),
+  readFile(new URL('../supabase/migrations/20261113180500_deny_client_access_to_ai_coach_usage.sql', import.meta.url), 'utf8'),
 ]);
 
 assert.match(html, /\.\/assets\/app\.css/);
@@ -38,6 +42,19 @@ assert.match(coach, /https:\/\/api\.openai\.com\/v1\/responses/);
 assert.match(coach, /ai_coach_consent/);
 assert.match(coach, />= 5/);
 assert.doesNotMatch(coach, /health_constraints|body_assessments/);
+
+// Security regression checks: all personal tables must keep RLS and ownership checks.
+for (const table of ['profiles', 'body_assessments', 'workout_plans', 'workout_logs', 'nutrition_plans', 'daily_hydration', 'supplement_plans']) {
+  assert.match(baseMigration, new RegExp('alter table public\\.' + table + ' enable row level security', 'i'), table + ' must keep RLS enabled');
+  assert.match(baseMigration, new RegExp('create policy "[^"]+" on public\\.' + table, 'i'), table + ' must have an ownership policy');
+}
+assert.match(baseMigration, /using \\(\(select auth\\.uid\\(\\)\\) = id\\)/i);
+assert.match(baseMigration, /with check \\(\(select auth\\.uid\\(\\)\\) = id\\)/i);
+assert.match(sessionsMigration, /alter table public\\.workout_sessions enable row level security/i);
+assert.match(sessionsMigration, /using \\(\(select auth\\.uid\\(\\)\\) = user_id\\)/i);
+assert.match(sessionsMigration, /with check \\(\(select auth\\.uid\\(\\)\\) = user_id\\)/i);
+assert.match(denyAiUsageMigration, /for all to anon, authenticated[\\s\\S]*using \\(false\\)[\\s\\S]*with check \\(false\\)/i);
+assert.match(aiUsageMigration, /revoke all on public\\.ai_coach_requests from anon, authenticated/i);
 assert.doesNotMatch(data, /\b(activeSchedule|activeScheduleBase|didx|renderDay)\b/);
 
 const declaredIds = new Set([...html.matchAll(/\bid=["']([^"']+)["']/g)].map((m) => m[1]));
