@@ -9,7 +9,32 @@ window.toggleAuth=()=>{signup=!signup;document.getElementById('nameField').style
 window.authSubmit=async()=>{let email=document.getElementById('authEmail').value.trim(),password=document.getElementById('authPassword').value,msg=document.getElementById('authMsg');if(!email||password.length<8){msg.textContent='أدخل البريد وكلمة مرور من 8 أحرف على الأقل.';return}msg.textContent='جارٍ الاتصال...';let r=signup?await db.auth.signUp({email,password,options:{data:{display_name:document.getElementById('authName').value.trim()}}}):await db.auth.signInWithPassword({email,password});if(r.error){msg.textContent=r.error.message;return}if(signup&&!r.data.session){msg.textContent='تم إنشاء الحساب. أكّد بريدك الإلكتروني ثم سجّل الدخول.';return}await sessionReady(r.data.session)};
 window.resetPassword=async()=>{let email=document.getElementById('authEmail').value.trim();if(!email){document.getElementById('authMsg').textContent='أدخل بريدك أولاً.';return}let r=await db.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});document.getElementById('authMsg').textContent=r.error?r.error.message:'إذا كان البريد مسجلاً ستصلك رسالة.'};
 window.signOut=async()=>{await db.auth.signOut();location.reload()};
-async function sessionReady(s){if(!s)return;user=s.user;window.currentFitUserId=user.id;let r=await db.from('profiles').select('*').eq('id',user.id).maybeSingle();if(r.error){document.getElementById('authMsg').textContent=r.error.message;return}if(!r.data||!r.data.onboarding_completed){document.getElementById('authPanel').style.display='none';document.getElementById('onboardPanel').style.display='block';document.getElementById('authGate').style.display='grid';return}window.currentFitnessProfile=r.data;await unlock(r.data);await loadWorkoutSession();await preloadExerciseHistory()}
+let sessionReadyUserId=null,sessionReadyPromise=null;
+async function sessionReady(s){
+ if(!s?.user)return;
+ if(sessionReadyUserId===s.user.id&&sessionReadyPromise)return sessionReadyPromise;
+ sessionReadyUserId=s.user.id;
+ sessionReadyPromise=(async()=>{
+  user=s.user;window.currentFitUserId=user.id;
+  const r=await db.from('profiles').select('*').eq('id',user.id).maybeSingle();
+  if(r.error){document.getElementById('authMsg').textContent=r.error.message;throw r.error}
+  if(!r.data||!r.data.onboarding_completed){
+   document.getElementById('authPanel').style.display='none';
+   document.getElementById('onboardPanel').style.display='block';
+   document.getElementById('authGate').style.display='grid';
+   return;
+  }
+  window.currentFitnessProfile=r.data;
+  await unlock(r.data);
+  await loadWorkoutSession();
+  await preloadExerciseHistory();
+ })();
+ try{return await sessionReadyPromise}
+ catch(e){
+  sessionReadyUserId=null;sessionReadyPromise=null;
+  console.error('session initialization failed',e);
+ }
+}
 async function unlock(p){window.applySchedule(p);document.getElementById('authGate').style.display='none';document.body.classList.remove('locked');document.getElementById('appUser').textContent=(p.display_name||user.email)+' ';let b=document.createElement('button');b.className='btn';b.textContent='خروج';b.onclick=()=>window.signOut();document.getElementById('appUser').appendChild(b);await loadMeasures();loadProfileSettings(p);await loadPlans(p);await loadSupplements();await renderWeeklyReview();await renderSmartCoach();await loadWorkoutLogs()}
 window.saveOnboarding=async()=>{const age=Number(document.getElementById("obAge").value),height=Number(document.getElementById("obHeight").value),weight=Number(document.getElementById("obWeight").value),waist=Number(document.getElementById("obWaist").value)||null,msg=document.getElementById("obMsg");const selected=[...new Set(document.getElementById("obDays").value.split(",").map(x=>Number(x.trim())).filter(x=>Number.isInteger(x)&&x>=0&&x<=6))].sort((a,b)=>a-b);if(age<13||age>100||height<80||height>250||weight<20||weight>400){msg.textContent='تحقق من العمر والطول والوزن.';return}if(!selected.length||selected.length>6){msg.textContent='اختر من يوم إلى ستة أيام تدريب صحيحة.';return}const trainingTime=document.getElementById("obTrainingTime").value;const p={id:user.id,display_name:user.user_metadata?.display_name||user.email.split('@')[0],age,sex:document.getElementById("obSex").value,height_cm:height,activity_level:document.getElementById("obActivity").value,dietary_pattern:document.getElementById("obDiet").value,goal:document.getElementById("obGoal").value,training_experience:document.getElementById("obLevel").value,available_days:selected,preferred_training_times:[trainingTime],health_constraints:{notes:document.getElementById("obNotes").value.trim(),allergies:document.getElementById("obAllergies").value.trim()},onboarding_completed:false};msg.textContent='جارٍ حفظ ملفك وبناء جدولك...';const a=await db.from('profiles').upsert(p);if(a.error){msg.textContent=a.error.message;return}const b=await db.from('body_assessments').insert({user_id:user.id,weight_kg:weight,waist_cm:waist});if(b.error){msg.textContent=b.error.message;return}window.applySchedule(p);const plansCreated=await createInitialPlans(p,weight);if(!plansCreated)return;const completed=await db.from('profiles').update({onboarding_completed:true}).eq('id',user.id);if(completed.error){msg.textContent='تم إنشاء الخطط، لكن تعذر إنهاء إعداد الحساب: '+completed.error.message;return}p.onboarding_completed=true;window.currentFitnessProfile=p;await unlock(p);await loadWorkoutSession();await preloadExerciseHistory()};
 function loadProfileSettings(p){const put=(id,value)=>{const el=document.getElementById(id);if(el)el.value=value??''};put('pfAge',p.age);put('pfSex',p.sex||'prefer_not_to_say');put('pfHeight',p.height_cm);put('pfActivity',p.activity_level||'light');put('pfDiet',p.dietary_pattern||'no_preference');put('pfGoal',p.goal||'general_fitness');put('pfLevel',p.training_experience||'beginner');put('pfTime',(p.preferred_training_times||[])[0]||'flexible');put('pfDays',(p.available_days||[]).join(','));put('pfAllergies',p.health_constraints?.allergies||'');put('pfNotes',p.health_constraints?.notes||'');put('aiConsent',p.ai_coach_consent===true)}
